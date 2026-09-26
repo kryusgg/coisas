@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Workspace {
+  id           String        @id @default(uuid())
+  nome         String
+  tipo         String        // Ex: "PESSOAL" ou "DOCE_METADE"
+  transacoes   Transaction[]
+  criado_em    DateTime      @default(now())
+}
+
+model CreditCard {
+  id             String        @id @default(uuid())
+  nome_cartao    String        // Ex: "Nubank", "Ailos"
+  dia_fechamento Int
+  dia_vencimento Int
+  transacoes     Transaction[]
+}
+
+model Transaction {
+  id                  String      @id @default(uuid())
+  descricao           String
+  valor               Float
+  data                DateTime
+  tipo                String      // "RECEITA" ou "DESPESA"
+  categoria           String      @default("Outros")
+  status              String      // "PENDENTE" ou "PAGO"
+
+  // Isolamento entre vida pessoal e o negócio
+  workspace           Workspace   @relation(fields: [workspace_id], references: [id])
+  workspace_id        String
+
+  // Motor de Acertos (Divisão de custos do casal)
+  compartilhado       Boolean     @default(false)
+  pago_por            String?     // Ex: "MARCOS" ou "STHE"
+
+  // Controle de Cartões de Crédito e Parcelas
+  cartao              CreditCard? @relation(fields: [cartao_id], references: [id])
+  cartao_id           String?
+  parcela_atual       Int?        // Ex: 1
+  total_parcelas      Int?        // Ex: 6
+
+  criado_em           DateTime    @default(now())
+}
