@@ -258,11 +258,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             </td>
                           )}
 
-                          <td className="p-4 text-gray-500">{t.data.toLocaleDateString('pt-BR')}</td>
-                          <td className="p-4 font-semibold">
-                            {t.descricao}
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 font-semibold">
+                              {/* BOLINHA COM A COR DO LOTE */}
+                              {t.cor_grupo && (
+                                <div className="w-3.5 h-3.5 rounded-full border border-black/10 flex-shrink-0" style={{ backgroundColor: t.cor_grupo }} title="Itens comprados juntos"></div>
+                              )}
+                              <span>{t.descricao}</span>
+                            </div>
                             {/* @ts-ignore */}
-                            <span className="block text-xs font-normal text-gray-400">
+                            <span className="block text-xs font-normal text-gray-400 mt-1">
                               {/* @ts-ignore */}
                               {t.categoria || 'Outros'} {t.lugar ? ` • 📍 ${t.lugar}` : ''}
                             </span>
@@ -270,9 +275,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                               {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
                               {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
                             </div>
-                          </td>
-                          <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
-                            {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
                           </td>
                           
                           {isEditMode && (

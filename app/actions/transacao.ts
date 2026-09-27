@@ -11,6 +11,7 @@ export async function criarTransacao(formData: FormData) {
   
   const compartilhado = formData.get('compartilhado') === 'on'
   const pago_por = compartilhado ? (formData.get('pago_por') as string) : null
+  const cor_grupo = formData.get('cor_grupo') as string // <--- CAPTURA A COR
   
   const usarCartao = formData.get('usar_cartao') === 'on'
   const parcelas = parseInt(formData.get('parcelas') as string) || 1
@@ -39,6 +40,7 @@ export async function criarTransacao(formData: FormData) {
           data: {
             descricao: `${item.descricao} (${i}/${parcelas})`,
             lugar: item.lugar || null,
+            cor_grupo: cor_grupo || null, // <--- SALVA A COR NO LOTE
             valor: valorParcela,
             data: dataParcela,
             tipo: item.tipo, 
@@ -54,6 +56,7 @@ export async function criarTransacao(formData: FormData) {
         data: {
           descricao: item.descricao,
           lugar: item.lugar || null, 
+          cor_grupo: cor_grupo || null, // <--- SALVA A COR NO LOTE
           valor: valorTotal, 
           data: dataLancamento, 
           tipo: item.tipo, 
@@ -75,6 +78,7 @@ export async function editarTransacao(formData: FormData) {
 
   const compartilhado = formData.get('compartilhado') === 'on'
   const pago_por = compartilhado ? (formData.get('pago_por') as string) : null
+  const cor_grupo = formData.get('cor_grupo') as string // <--- EDITA A COR
   
   const dataInput = formData.get('data') as string
   const dataBase = new Date(`${dataInput}T12:00:00`)
@@ -84,6 +88,7 @@ export async function editarTransacao(formData: FormData) {
     data: {
       descricao: item.descricao,
       lugar: item.lugar || null,
+      cor_grupo: cor_grupo || null,
       valor: parseFloat(item.valor),
       tipo: item.tipo,
       categoria: item.categoria,

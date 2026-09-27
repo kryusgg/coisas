@@ -7,6 +7,12 @@ import { criarTransacao, editarTransacao } from './actions/transacao'
 export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, params }: any) {
   const formRef = useRef<HTMLFormElement>(null)
   
+  // Função para gerar uma cor aleatória bonita
+  const gerarCorAleatoria = () => '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
+  
+  // Estado que guarda a cor escolhida para este lote todo
+  const [corGrupo, setCorGrupo] = useState(transacaoEdit?.cor_grupo || gerarCorAleatoria())
+
   const [itens, setItens] = useState(
     transacaoEdit
       ? [{ id: 1, descricao: transacaoEdit.descricao, lugar: transacaoEdit.lugar || '', categoria: transacaoEdit.categoria, valor: transacaoEdit.valor.toString(), tipo: transacaoEdit.tipo }]
@@ -24,7 +30,18 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
   }
 
   const adicionarItem = () => {
-    setItens([...itens, { id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
+    const primeiroItem = itens[0]; 
+    setItens([
+      ...itens, 
+      { 
+        id: Date.now(), 
+        descricao: '',                          
+        lugar: primeiroItem?.lugar || '',       // Herda o lugar do item 1
+        categoria: 'Outros',                    
+        valor: '',                              
+        tipo: primeiroItem?.tipo || 'DESPESA'   // Herda o tipo do item 1
+      }
+    ])
   }
 
   const removerItem = (id: number) => {
@@ -38,13 +55,19 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
   }
 
   const clientAction = async (formData: FormData) => {
+    // Adiciona a cor escolhida ao formulário antes de enviar
+    formData.append('cor_grupo', corGrupo)
+
     if (transacaoEdit) {
       await editarTransacao(formData)
       alert('✅ Edição salva com sucesso!')
     } else {
       await criarTransacao(formData)
       alert('✅ Lançamento(s) registrado(s) com sucesso!')
+      
+      // Reseta os itens e gera uma NOVA cor aleatória para a próxima nota
       setItens([{ id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
+      setCorGrupo(gerarCorAleatoria())
       formRef.current?.reset()
     }
   }
@@ -66,9 +89,16 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
         <input type="hidden" name="itens" value={JSON.stringify(itens)} />
         {transacaoEdit && <input type="hidden" name="id" value={transacaoEdit.id} />}
 
-        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-          <label className="block mb-1 font-bold text-gray-700">📅 Data da Compra / Recebimento</label>
-          <input type="date" name="data" required defaultValue={obterDataPadrao()} className="border border-gray-300 p-2 w-full rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 transition-colors" />
+        {/* NOVA LINHA: DATA E COR DO LOTE */}
+        <div className="flex gap-3">
+          <div className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+            <label className="block mb-1 font-bold text-gray-700">📅 Data da Compra</label>
+            <input type="date" name="data" required defaultValue={obterDataPadrao()} className="border border-gray-300 p-2 w-full rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex flex-col items-center justify-center w-24">
+            <label className="block mb-1 font-bold text-gray-700 text-xs text-center leading-tight">Cor da Nota</label>
+            <input type="color" value={corGrupo} onChange={(e) => setCorGrupo(e.target.value)} className="w-8 h-8 cursor-pointer rounded border-0 outline-none bg-transparent" title="Cor que agrupará estes itens no extrato" />
+          </div>
         </div>
 
         <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 pb-2 mt-2">
@@ -82,7 +112,6 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
               )}
               {itens.length > 1 && <h4 className="font-bold text-gray-500 mb-2 border-b pb-1">Item {index + 1}</h4>}
 
-              {/* MUDANÇA AQUI: Descrição e Local lado a lado */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <label className="block mb-1 font-semibold">{abaWs === 'EMPRESTIMO' ? 'Quem Pegou?' : 'Descrição'}</label>
