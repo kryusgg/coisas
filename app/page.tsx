@@ -18,7 +18,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   if (params.view === 'extrato') visaoAtual = 'extrato'
   if (params.view === 'casal') visaoAtual = 'casal'
 
-  // Verifica se o Modo de Edição está ativo na URL
   const isEditMode = params.mode === 'edit'
 
   const workspaces = await prisma.workspace.findMany()
@@ -227,7 +226,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                       <span>🗑️</span> Marque os itens abaixo para excluir
                     </span>
                     <div className="flex gap-2">
-                      <input type="password" name="senha" placeholder="Digite a Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                      <input type="password" name="senha" placeholder="Senha (1234)" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                       <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                         Excluir Selecionados
                       </button>
@@ -258,9 +257,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             </td>
                           )}
 
+                          {/* COLUNA 1: DATA RECUPERADA */}
+                          <td className="p-4 text-gray-500">
+                            {t.data.toLocaleDateString('pt-BR')}
+                          </td>
+                          
+                          {/* COLUNA 2: DESCRIÇÃO, LOCAL E COR */}
                           <td className="p-4">
                             <div className="flex items-center gap-2 font-semibold">
-                              {/* BOLINHA COM A COR DO LOTE */}
                               {t.cor_grupo && (
                                 <div className="w-3.5 h-3.5 rounded-full border border-black/10 flex-shrink-0" style={{ backgroundColor: t.cor_grupo }} title="Itens comprados juntos"></div>
                               )}
@@ -275,6 +279,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                               {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
                               {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
                             </div>
+                          </td>
+                          
+                          {/* COLUNA 3: VALOR RECUPERADO */}
+                          <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
+                            {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
                           </td>
                           
                           {isEditMode && (
