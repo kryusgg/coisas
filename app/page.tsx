@@ -1,15 +1,14 @@
 export const dynamic = 'force-dynamic';
 
 import { PrismaClient } from '@prisma/client'
-import { criarTransacao, liquidarDivida, apagarTransacao } from './actions/transacao'
+import { criarTransacao, liquidarDivida, apagarTransacao, editarTransacao } from './actions/transacao'
 import Link from 'next/link'
 
 const prisma = new PrismaClient()
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ ws?: string, view?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ ws?: string, view?: string, edit?: string }> }) {
   const params = await searchParams
   
-  // Define a aba ativa baseada no URL
   let abaWs = 'PESSOAL'
   if (params.ws === 'doce_metade') abaWs = 'DOCE_METADE'
   if (params.ws === 'emprestimos') abaWs = 'EMPRESTIMO'
@@ -26,6 +25,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     orderBy: { data: 'desc' }
   })
 
+  // Identifica se estamos a editar alguma transação (baseado no clique do botão)
+  const transacaoEdit = params.edit ? transacoes.find(t => t.id === params.edit) : null
+
   const mesAtual = new Date().getMonth()
   const anoAtual = new Date().getFullYear()
   const transacoesMes = transacoes.filter(t => t.data.getMonth() === mesAtual && t.data.getFullYear() === anoAtual)
@@ -34,7 +36,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   const totalDespesas = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
   const saldoFinal = totalReceitas - totalDespesas
 
-  // LÓGICA DO GRÁFICO EM PIZZA (Apenas Despesas)
+  // Lógica do Gráfico de Pizza
   const despesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA' && t.valor > 0)
   const coresPizza = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1']
   
@@ -51,10 +53,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     
     categoriasAgrupadas = Array.from(mapaCat.entries())
       .map(([nome, valor], index) => ({
-        nome,
-        valor,
-        percentual: (valor / totalDespesas) * 100,
-        cor: coresPizza[index % coresPizza.length]
+        nome, valor, percentual: (valor / totalDespesas) * 100, cor: coresPizza[index % coresPizza.length]
       }))
       .sort((a, b) => b.valor - a.valor)
 
@@ -109,7 +108,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-12">
       
-      {/* MENU SUPERIOR (3 WORKSPACES) */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex gap-4">
           <Link href="?ws=pessoal&view=resumo" className={`px-4 py-2 rounded-lg font-bold transition-colors ${abaWs === 'PESSOAL' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
@@ -126,24 +124,31 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
       <div className="max-w-6xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* FORMULÁRIO DINÂMICO */}
+        {/* FORMULÁRIO DINÂMICO (CRIAÇÃO OU EDIÇÃO) */}
         <aside className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-          <h2 className="text-xl font-bold mb-4">
-            {abaWs === 'EMPRESTIMO' ? 'Novo Empréstimo' : 'Novo Lançamento'}
+          <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
+            {transacaoEdit ? (
+              <span className="text-blue-600">✏️ Editar Lançamento</span>
+            ) : (
+              <span>{abaWs === 'EMPRESTIMO' ? 'Novo Empréstimo' : 'Novo Lançamento'}</span>
+            )}
           </h2>
-          <form action={criarTransacao} className="flex flex-col gap-4 text-sm">
+
+          <form action={transacaoEdit ? editarTransacao : criarTransacao} className="flex flex-col gap-4 text-sm">
             <input type="hidden" name="workspace_id" value={workspaceAtivo?.id || ''} />
+            {transacaoEdit && <input type="hidden" name="id" value={transacaoEdit.id} />}
 
             <div>
               <label className="block mb-1 font-semibold">
                 {abaWs === 'EMPRESTIMO' ? 'Nome de Quem Pegou Emprestado' : 'Descrição'}
               </label>
-              <input type="text" name="descricao" required className="border p-2 w-full rounded" placeholder={abaWs === 'EMPRESTIMO' ? "Ex: João (Dinheiro emprestado)..." : "O que foi?"} />
+              <input type="text" name="descricao" required defaultValue={transacaoEdit?.descricao || ''} className="border p-2 w-full rounded" placeholder="O que foi?" />
             </div>
             
             <div>
               <label className="block mb-1 font-semibold">Categoria / Identificação</label>
-              <select name="categoria" className="border p-2 w-full rounded bg-white">
+              {/* @ts-ignore */}
+              <select name="categoria" defaultValue={transacaoEdit?.categoria || 'Outros'} className="border p-2 w-full rounded bg-white">
                 {abaWs === 'PESSOAL' ? (
                   <>
                     <option value="Alimentação">🛒 Alimentação / Mercado</option>
@@ -176,11 +181,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 font-semibold">Valor (R$)</label>
-                <input type="number" step="0.01" name="valor" required className="border p-2 w-full rounded" placeholder="0.00" />
+                <input type="number" step="0.01" name="valor" required defaultValue={transacaoEdit?.valor || ''} className="border p-2 w-full rounded" placeholder="0.00" />
               </div>
               <div>
                 <label className="block mb-1 font-semibold">Tipo</label>
-                <select name="tipo" className="border p-2 w-full rounded">
+                <select name="tipo" defaultValue={transacaoEdit?.tipo || 'DESPESA'} className="border p-2 w-full rounded">
                   <option value="DESPESA">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Saiu)' : 'Despesa'}</option>
                   <option value="RECEITA">{abaWs === 'EMPRESTIMO' ? 'Recebido de Volta' : 'Receita'}</option>
                   {abaWs === 'PESSOAL' && <option value="ACERTO">Acerto / PIX</option>}
@@ -188,14 +193,27 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
               </div>
             </div>
 
+            {/* Oculta os cartões na edição para não bagunçar parcelas futuras */}
+            {!transacaoEdit && (
+              <div className="p-3 border rounded bg-gray-50">
+                <input type="checkbox" name="usar_cartao" id="usar_cartao" className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
+                <label htmlFor="usar_cartao" className="cursor-pointer font-bold block">Foi no Cartão?</label>
+                <div className="clear-both"></div>
+                <div className="hidden peer-checked:block mt-3 pt-3 border-t">
+                  <label className="block mb-1 text-xs">Parcelas</label>
+                  <input type="number" name="parcelas" min="1" defaultValue="1" className="border p-1 w-full rounded" />
+                </div>
+              </div>
+            )}
+
             {abaWs === 'PESSOAL' && (
               <div className="p-3 border border-blue-100 rounded bg-blue-50">
-                <input type="checkbox" name="compartilhado" id="compartilhado" className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
+                <input type="checkbox" name="compartilhado" id="compartilhado" defaultChecked={transacaoEdit?.compartilhado || false} className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
                 <label htmlFor="compartilhado" className="cursor-pointer font-bold text-blue-900 block">Dividir conta/Acerto?</label>
                 <div className="clear-both"></div>
                 <div className="hidden peer-checked:block mt-3 pt-3 border-t border-blue-200">
                    <label className="block mb-1 text-xs text-blue-800">Quem pagou?</label>
-                   <select name="pago_por" className="border border-blue-200 p-1 w-full rounded">
+                   <select name="pago_por" defaultValue={transacaoEdit?.pago_por || 'Marcos'} className="border border-blue-200 p-1 w-full rounded">
                      <option value="Marcos">Marcos</option>
                      <option value="Sthe">Sthe</option>
                    </select>
@@ -203,13 +221,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
               </div>
             )}
 
-            <button type="submit" className={`p-3 rounded mt-2 font-bold text-white transition-colors ${abaWs === 'PESSOAL' ? 'bg-blue-600 hover:bg-blue-700' : (abaWs === 'DOCE_METADE' ? 'bg-pink-600 hover:bg-pink-700' : 'bg-purple-600 hover:bg-purple-700')}`}>
-              Registrar {abaWs === 'PESSOAL' ? 'Lançamento' : (abaWs === 'DOCE_METADE' ? 'no Negócio' : 'Empréstimo')}
-            </button>
+            <div className="flex gap-2 mt-2">
+              <button type="submit" className={`p-3 rounded font-bold text-white flex-1 transition-colors ${transacaoEdit ? 'bg-blue-600 hover:bg-blue-700' : (abaWs === 'PESSOAL' ? 'bg-blue-600 hover:bg-blue-700' : (abaWs === 'DOCE_METADE' ? 'bg-pink-600 hover:bg-pink-700' : 'bg-purple-600 hover:bg-purple-700'))}`}>
+                {transacaoEdit ? 'Salvar Edição' : 'Registrar'}
+              </button>
+              
+              {transacaoEdit && (
+                <Link href={`?ws=${params.ws || 'pessoal'}&view=${params.view || 'extrato'}`} className="p-3 rounded font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 flex-1 text-center">
+                  Cancelar
+                </Link>
+              )}
+            </div>
           </form>
         </aside>
 
-        {/* PAINEL DE CONTEÚDO */}
         <section className="lg:col-span-2">
           
           <div className="flex gap-2 mb-6 border-b pb-2">
@@ -245,12 +270,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                 </div>
               </div>
 
-              {/* GRÁFICO DE PIZZA (Apenas Pessoal e Doce Metade) */}
               {abaWs !== 'EMPRESTIMO' && (
                 <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-8 items-center">
-                  <div className="w-48 h-48 rounded-full shadow-inner border border-gray-200 flex-shrink-0" 
-                       style={{ background: conicGradient }}>
-                  </div>
+                  <div className="w-48 h-48 rounded-full shadow-inner border border-gray-200 flex-shrink-0" style={{ background: conicGradient }}></div>
                   <div className="flex-1 w-full">
                     <h3 className="font-bold text-lg mb-4 text-gray-800">Despesas por Categoria</h3>
                     {categoriasAgrupadas.length === 0 ? (
@@ -275,25 +297,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                 </div>
               )}
 
-              {/* PAINEL DE EMPRÉSTIMOS PENDENTES (Aparece na aba Empréstimos) */}
-              {abaWs === 'EMPRESTIMO' && (
-                <div className="bg-purple-50 p-6 rounded-xl border border-purple-200 shadow-sm">
-                  <h3 className="font-bold text-lg text-purple-900 mb-2">🤝 Controlo de Quem lhe Deve</h3>
-                  <p className="text-sm text-purple-700 mb-4">
-                    Aqui ficam registados todos os valores que saíram do seu bolso para amigos ou conhecidos. Quando lhe pagarem de volta, basta registrar uma entrada com o mesmo nome para zerar o saldo!
-                  </p>
-                  <div className="bg-white p-4 rounded border border-purple-100 font-bold text-lg text-purple-900">
-                    Total na rua a precisar de cobrança: R$ {Math.abs(saldoFinal).toFixed(2)}
-                  </div>
-                </div>
-              )}
-
               {abaWs === 'PESSOAL' && (
                 <div className={`p-5 border rounded-xl shadow-sm ${estiloAcerto}`}>
                   <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal</h3>
                   <p className="text-sm opacity-80 mb-2">Total partilhado: R$ {totalCompartilhado.toFixed(2)}</p>
                   <p className="text-xl font-black mb-4">{mensagemAcerto}</p>
-                  
                   {devedor && (
                     <form action={liquidarDivida}>
                       <input type="hidden" name="workspace_id" value={workspaceAtivo?.id} />
@@ -316,25 +324,22 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                   <tr>
                     <th className="p-4">Data</th>
                     <th className="p-4">Descrição</th>
-                    <th className="p-4">Detalhes</th>
                     <th className="p-4 text-right">Valor</th>
-                    <th className="p-4 text-center">Ação</th>
+                    <th className="p-4 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {transacoes.length === 0 ? (
-                     <tr><td colSpan={5} className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
+                     <tr><td colSpan={4} className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
                   ) : (
                     transacoes.map((t) => (
-                      <tr key={t.id} className="hover:bg-gray-50">
+                      <tr key={t.id} className={`hover:bg-gray-50 ${t.id === params.edit ? 'bg-blue-50' : ''}`}>
                         <td className="p-4 text-gray-500">{t.data.toLocaleDateString('pt-BR')}</td>
                         <td className="p-4 font-semibold">
                           {t.descricao}
                           {/* @ts-ignore */}
                           <span className="block text-xs font-normal text-gray-400">{t.categoria || 'Outros'}</span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 mt-1">
                             {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
                             {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
                           </div>
@@ -342,11 +347,22 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
                           {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
                         </td>
-                        <td className="p-4 text-center">
-                          <form action={apagarTransacao}>
-                            <input type="hidden" name="id" value={t.id} />
-                            <button type="submit" className="text-red-500 hover:text-red-700 font-bold bg-red-50 px-2 py-1 rounded" title="Excluir">X</button>
-                          </form>
+                        <td className="p-4 text-center w-48">
+                          
+                          <div className="flex justify-center items-center gap-2">
+                            {/* BOTÃO EDITAR */}
+                            <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-3 py-1.5 rounded transition-colors" title="Editar">
+                              ✏️
+                            </Link>
+
+                            {/* EXCLUSÃO PROTEGIDA POR SENHA */}
+                            <form action={apagarTransacao} className="flex gap-1 items-center bg-red-50 p-1 rounded border border-red-100">
+                              <input type="hidden" name="id" value={t.id} />
+                              <input type="password" name="senha" placeholder="Senha" required className="w-16 px-1.5 py-1 text-xs border border-red-200 rounded bg-white outline-none focus:border-red-500" title="Digite a senha (1234) para apagar" />
+                              <button type="submit" className="text-red-500 hover:text-red-700 font-bold px-2 py-1" title="Excluir">X</button>
+                            </form>
+                          </div>
+
                         </td>
                       </tr>
                     ))
