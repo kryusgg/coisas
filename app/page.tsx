@@ -363,7 +363,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                 {transacoesMes.filter(t => t.compartilhado).length === 0 ? (
                   <p className="text-orange-700 opacity-80">Nenhum gasto partilhado neste mês.</p>
                 ) : (
-                  transacoesMes.filter(t => t.compartilยอด).map(t => (
+                  transacoesMes.filter(t => t.compartilhado).map(t => (
                     <li key={t.id} className="bg-white p-3 rounded shadow-sm flex justify-between border border-orange-100 items-center">
                       <div>
                         <span className="block font-semibold">{t.descricao}</span>
