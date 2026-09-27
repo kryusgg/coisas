@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import { PrismaClient } from '@prisma/client'
-import { criarTransacao, liquidarDivida, apagarTransacao, editarTransacao } from './actions/transacao'
+import Formulario from './Formulario'
+import { apagarTransacao, liquidarDivida } from './actions/transacao'
 import Link from 'next/link'
 
 const prisma = new PrismaClient()
@@ -25,7 +26,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     orderBy: { data: 'desc' }
   })
 
-  // Identifica se estamos a editar alguma transação (baseado no clique do botão)
   const transacaoEdit = params.edit ? transacoes.find(t => t.id === params.edit) : null
 
   const mesAtual = new Date().getMonth()
@@ -36,7 +36,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   const totalDespesas = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
   const saldoFinal = totalReceitas - totalDespesas
 
-  // Lógica do Gráfico de Pizza
   const despesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA' && t.valor > 0)
   const coresPizza = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1']
   
@@ -66,7 +65,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     conicGradient = `conic-gradient(${stops})`
   }
 
-  // Motor Acerto Casal
   let totalMarcos = 0
   let totalSthe = 0
   let acertosMarcos = 0
@@ -124,116 +122,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
       <div className="max-w-6xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* FORMULÁRIO DINÂMICO (CRIAÇÃO OU EDIÇÃO) */}
-        <aside className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-          <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
-            {transacaoEdit ? (
-              <span className="text-blue-600">✏️ Editar Lançamento</span>
-            ) : (
-              <span>{abaWs === 'EMPRESTIMO' ? 'Novo Empréstimo' : 'Novo Lançamento'}</span>
-            )}
-          </h2>
-
-          <form action={transacaoEdit ? editarTransacao : criarTransacao} className="flex flex-col gap-4 text-sm">
-            <input type="hidden" name="workspace_id" value={workspaceAtivo?.id || ''} />
-            {transacaoEdit && <input type="hidden" name="id" value={transacaoEdit.id} />}
-
-            <div>
-              <label className="block mb-1 font-semibold">
-                {abaWs === 'EMPRESTIMO' ? 'Nome de Quem Pegou Emprestado' : 'Descrição'}
-              </label>
-              <input type="text" name="descricao" required defaultValue={transacaoEdit?.descricao || ''} className="border p-2 w-full rounded" placeholder="O que foi?" />
-            </div>
-            
-            <div>
-              <label className="block mb-1 font-semibold">Categoria / Identificação</label>
-              {/* @ts-ignore */}
-              <select name="categoria" defaultValue={transacaoEdit?.categoria || 'Outros'} className="border p-2 w-full rounded bg-white">
-                {abaWs === 'PESSOAL' ? (
-                  <>
-                    <option value="Alimentação">🛒 Alimentação / Mercado</option>
-                    <option value="Casa">🏠 Casa / Contas</option>
-                    <option value="Transporte">🚗 Transporte / Combustível</option>
-                    <option value="Saúde">⚕️ Saúde</option>
-                    <option value="Lazer">🍿 Lazer / Restaurante</option>
-                    <option value="Compras">🛍️ Compras</option>
-                    <option value="Outros">Outros</option>
-                  </>
-                ) : abaWs === 'DOCE_METADE' ? (
-                  <>
-                    <option value="Insumos">🧈 Insumos / Ingredientes</option>
-                    <option value="Embalagens">📦 Embalagens</option>
-                    <option value="Equipamentos">🍳 Equipamentos</option>
-                    <option value="Marketing">📱 Marketing / Anúncios</option>
-                    <option value="Entregas">🛵 Entregas</option>
-                    <option value="Vendas">💰 Vendas (Receita)</option>
-                    <option value="Outros">Outros</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="EmprestimoFeito">💸 Dinheiro Emprestado (Saída)</option>
-                    <option value="Recebimento">✅ Dinheiro Recebido de Volta (Entrada)</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-1 font-semibold">Valor (R$)</label>
-                <input type="number" step="0.01" name="valor" required defaultValue={transacaoEdit?.valor || ''} className="border p-2 w-full rounded" placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block mb-1 font-semibold">Tipo</label>
-                <select name="tipo" defaultValue={transacaoEdit?.tipo || 'DESPESA'} className="border p-2 w-full rounded">
-                  <option value="DESPESA">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Saiu)' : 'Despesa'}</option>
-                  <option value="RECEITA">{abaWs === 'EMPRESTIMO' ? 'Recebido de Volta' : 'Receita'}</option>
-                  {abaWs === 'PESSOAL' && <option value="ACERTO">Acerto / PIX</option>}
-                </select>
-              </div>
-            </div>
-
-            {/* Oculta os cartões na edição para não bagunçar parcelas futuras */}
-            {!transacaoEdit && (
-              <div className="p-3 border rounded bg-gray-50">
-                <input type="checkbox" name="usar_cartao" id="usar_cartao" className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
-                <label htmlFor="usar_cartao" className="cursor-pointer font-bold block">Foi no Cartão?</label>
-                <div className="clear-both"></div>
-                <div className="hidden peer-checked:block mt-3 pt-3 border-t">
-                  <label className="block mb-1 text-xs">Parcelas</label>
-                  <input type="number" name="parcelas" min="1" defaultValue="1" className="border p-1 w-full rounded" />
-                </div>
-              </div>
-            )}
-
-            {abaWs === 'PESSOAL' && (
-              <div className="p-3 border border-blue-100 rounded bg-blue-50">
-                <input type="checkbox" name="compartilhado" id="compartilhado" defaultChecked={transacaoEdit?.compartilhado || false} className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
-                <label htmlFor="compartilhado" className="cursor-pointer font-bold text-blue-900 block">Dividir conta/Acerto?</label>
-                <div className="clear-both"></div>
-                <div className="hidden peer-checked:block mt-3 pt-3 border-t border-blue-200">
-                   <label className="block mb-1 text-xs text-blue-800">Quem pagou?</label>
-                   <select name="pago_por" defaultValue={transacaoEdit?.pago_por || 'Marcos'} className="border border-blue-200 p-1 w-full rounded">
-                     <option value="Marcos">Marcos</option>
-                     <option value="Sthe">Sthe</option>
-                   </select>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 mt-2">
-              <button type="submit" className={`p-3 rounded font-bold text-white flex-1 transition-colors ${transacaoEdit ? 'bg-blue-600 hover:bg-blue-700' : (abaWs === 'PESSOAL' ? 'bg-blue-600 hover:bg-blue-700' : (abaWs === 'DOCE_METADE' ? 'bg-pink-600 hover:bg-pink-700' : 'bg-purple-600 hover:bg-purple-700'))}`}>
-                {transacaoEdit ? 'Salvar Edição' : 'Registrar'}
-              </button>
-              
-              {transacaoEdit && (
-                <Link href={`?ws=${params.ws || 'pessoal'}&view=${params.view || 'extrato'}`} className="p-3 rounded font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 flex-1 text-center">
-                  Cancelar
-                </Link>
-              )}
-            </div>
-          </form>
-        </aside>
+        {/* AQUI ESTÁ A MAGIA: A propriedade "key" força o formulário a preencher os dados salvos sempre que clicar num botão de editar diferente */}
+        <Formulario key={transacaoEdit?.id || abaWs} abaWs={abaWs} workspaceAtivo={workspaceAtivo} transacaoEdit={transacaoEdit} params={params} />
 
         <section className="lg:col-span-2">
           
@@ -350,12 +240,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         <td className="p-4 text-center w-48">
                           
                           <div className="flex justify-center items-center gap-2">
-                            {/* BOTÃO EDITAR */}
                             <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-3 py-1.5 rounded transition-colors" title="Editar">
                               ✏️
                             </Link>
-
-                            {/* EXCLUSÃO PROTEGIDA POR SENHA */}
                             <form action={apagarTransacao} className="flex gap-1 items-center bg-red-50 p-1 rounded border border-red-100">
                               <input type="hidden" name="id" value={t.id} />
                               <input type="password" name="senha" placeholder="Senha" required className="w-16 px-1.5 py-1 text-xs border border-red-200 rounded bg-white outline-none focus:border-red-500" title="Digite a senha (1234) para apagar" />
