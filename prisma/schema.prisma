@@ -27,6 +27,7 @@ model CreditCard {
 model Transaction {
   id                  String      @id @default(uuid())
   descricao           String
+  lugar           String?  //
   valor               Float
   data                DateTime
   tipo                String      // "RECEITA" ou "DESPESA"

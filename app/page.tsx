@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 
 import { PrismaClient } from '@prisma/client'
 import Formulario from './Formulario'
-import { apagarTransacao, liquidarDivida } from './actions/transacao'
+import { apagarVariasTransacoes, liquidarDivida } from './actions/transacao'
 import Link from 'next/link'
 
 const prisma = new PrismaClient()
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ ws?: string, view?: string, edit?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ ws?: string, view?: string, edit?: string, mode?: string }> }) {
   const params = await searchParams
   
   let abaWs = 'PESSOAL'
@@ -17,6 +17,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let visaoAtual = 'resumo'
   if (params.view === 'extrato') visaoAtual = 'extrato'
   if (params.view === 'casal') visaoAtual = 'casal'
+
+  // Verifica se o Modo de Edição está ativo na URL
+  const isEditMode = params.mode === 'edit'
 
   const workspaces = await prisma.workspace.findMany()
   const workspaceAtivo = workspaces.find(w => w.tipo === abaWs) || workspaces[0]
@@ -122,7 +125,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
       <div className="max-w-6xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* AQUI ESTÁ A MAGIA: A propriedade "key" força o formulário a preencher os dados salvos sempre que clicar num botão de editar diferente */}
         <Formulario key={transacaoEdit?.id || abaWs} abaWs={abaWs} workspaceAtivo={workspaceAtivo} transacaoEdit={transacaoEdit} params={params} />
 
         <section className="lg:col-span-2">
@@ -143,7 +145,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
           {visaoAtual === 'resumo' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
+               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Total Recebido' : 'Entradas'}</p>
                   <p className="text-2xl font-black text-green-600">R$ {totalReceitas.toFixed(2)}</p>
@@ -209,53 +211,84 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
           {visaoAtual === 'extrato' && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-100 text-gray-600">
-                  <tr>
-                    <th className="p-4">Data</th>
-                    <th className="p-4">Descrição</th>
-                    <th className="p-4 text-right">Valor</th>
-                    <th className="p-4 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {transacoes.length === 0 ? (
-                     <tr><td colSpan={4} className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
-                  ) : (
-                    transacoes.map((t) => (
-                      <tr key={t.id} className={`hover:bg-gray-50 ${t.id === params.edit ? 'bg-blue-50' : ''}`}>
-                        <td className="p-4 text-gray-500">{t.data.toLocaleDateString('pt-BR')}</td>
-                        <td className="p-4 font-semibold">
-                          {t.descricao}
-                          {/* @ts-ignore */}
-                          <span className="block text-xs font-normal text-gray-400">{t.categoria || 'Outros'}</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
-                            {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
-                          </div>
-                        </td>
-                        <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
-                          {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
-                        </td>
-                        <td className="p-4 text-center w-48">
-                          
-                          <div className="flex justify-center items-center gap-2">
-                            <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-3 py-1.5 rounded transition-colors" title="Editar">
-                              ✏️
-                            </Link>
-                            <form action={apagarTransacao} className="flex gap-1 items-center bg-red-50 p-1 rounded border border-red-100">
-                              <input type="hidden" name="id" value={t.id} />
-                              <input type="password" name="senha" placeholder="Senha" required className="w-16 px-1.5 py-1 text-xs border border-red-200 rounded bg-white outline-none focus:border-red-500" title="Digite a senha (1234) para apagar" />
-                              <button type="submit" className="text-red-500 hover:text-red-700 font-bold px-2 py-1" title="Excluir">X</button>
-                            </form>
-                          </div>
+              
+              <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <h3 className="font-bold text-gray-700">Lançamentos Registados</h3>
+                <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato${isEditMode ? '' : '&mode=edit'}`} className={`px-4 py-2 rounded text-sm font-bold transition-colors shadow-sm ${isEditMode ? 'bg-gray-800 text-white hover:bg-black' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'}`}>
+                  {isEditMode ? 'Sair do Modo Edição' : '✏️ Ativar Modo Edição'}
+                </Link>
+              </div>
 
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <form action={apagarVariasTransacoes}>
+                
+                {isEditMode && (
+                  <div className="bg-red-50 p-3 flex justify-between items-center border-b border-red-200">
+                    <span className="text-sm font-bold text-red-800 flex items-center gap-2">
+                      <span>🗑️</span> Marque os itens abaixo para excluir
+                    </span>
+                    <div className="flex gap-2">
+                      <input type="password" name="senha" placeholder="Digite a Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                      <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
+                        Excluir Selecionados
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-100 text-gray-600">
+                    <tr>
+                      {isEditMode && <th className="p-4 w-12 text-center">✅</th>}
+                      <th className="p-4">Data</th>
+                      <th className="p-4">Descrição</th>
+                      <th className="p-4 text-right">Valor</th>
+                      {isEditMode && <th className="p-4 text-center">Ações</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {transacoes.length === 0 ? (
+                       <tr><td colSpan={isEditMode ? 5 : 4} className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
+                    ) : (
+                      transacoes.map((t) => (
+                        <tr key={t.id} className={`hover:bg-gray-50 ${t.id === params.edit ? 'bg-blue-50' : ''}`}>
+                          
+                          {isEditMode && (
+                            <td className="p-4 text-center border-r border-gray-100">
+                              <input type="checkbox" name="ids" value={t.id} className="w-4 h-4 cursor-pointer accent-red-600" />
+                            </td>
+                          )}
+
+                          <td className="p-4 text-gray-500">{t.data.toLocaleDateString('pt-BR')}</td>
+                          <td className="p-4 font-semibold">
+                            {t.descricao}
+                            {/* @ts-ignore */}
+                            <span className="block text-xs font-normal text-gray-400">
+                              {/* @ts-ignore */}
+                              {t.categoria || 'Outros'} {t.lugar ? ` • 📍 ${t.lugar}` : ''}
+                            </span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
+                              {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
+                            </div>
+                          </td>
+                          <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
+                            {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
+                          </td>
+                          
+                          {isEditMode && (
+                            <td className="p-4 text-center w-24">
+                              <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&mode=edit&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-4 py-2 rounded transition-colors inline-block shadow-sm" title="Modificar Item">
+                                ✏️
+                              </Link>
+                            </td>
+                          )}
+
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </form>
             </div>
           )}
 

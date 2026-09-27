@@ -17,9 +17,7 @@ export async function criarTransacao(formData: FormData) {
   const workspace_id = formData.get('workspace_id') as string 
   const cartao_id = usarCartao ? '22222222-2222-2222-2222-222222222222' : null
 
-  // NOVA LÓGICA DE DATA: Puxa a data exata que escolheu no calendário
   const dataInput = formData.get('data') as string
-  // O T12:00:00 garante que o fuso horário da Vercel não empurre a data para o dia anterior
   const dataBase = new Date(`${dataInput}T12:00:00`) 
 
   let mesBase = dataBase.getMonth();
@@ -40,6 +38,7 @@ export async function criarTransacao(formData: FormData) {
         await prisma.transaction.create({
           data: {
             descricao: `${item.descricao} (${i}/${parcelas})`,
+            lugar: item.lugar || null,
             valor: valorParcela,
             data: dataParcela,
             tipo: item.tipo, 
@@ -53,7 +52,8 @@ export async function criarTransacao(formData: FormData) {
       const dataLancamento = usarCartao ? new Date(anoBase, mesBase, 11, 12, 0, 0) : dataBase;
       await prisma.transaction.create({
         data: {
-          descricao: item.descricao, 
+          descricao: item.descricao,
+          lugar: item.lugar || null, 
           valor: valorTotal, 
           data: dataLancamento, 
           tipo: item.tipo, 
@@ -76,7 +76,6 @@ export async function editarTransacao(formData: FormData) {
   const compartilhado = formData.get('compartilhado') === 'on'
   const pago_por = compartilhado ? (formData.get('pago_por') as string) : null
   
-  // Atualiza também a data na edição
   const dataInput = formData.get('data') as string
   const dataBase = new Date(`${dataInput}T12:00:00`)
 
@@ -84,6 +83,7 @@ export async function editarTransacao(formData: FormData) {
     where: { id },
     data: {
       descricao: item.descricao,
+      lugar: item.lugar || null,
       valor: parseFloat(item.valor),
       tipo: item.tipo,
       categoria: item.categoria,
@@ -111,11 +111,15 @@ export async function liquidarDivida(formData: FormData) {
 export async function apagarTransacao(formData: FormData) {
   const id = formData.get('id') as string
   const senha = formData.get('senha') as string
-  
-  if (senha !== '1234') {
-    return 
-  }
-
+  if (senha !== '1234') return 
   await prisma.transaction.delete({ where: { id } })
+  revalidatePath('/')
+}
+
+export async function apagarVariasTransacoes(formData: FormData) {
+  const ids = formData.getAll('ids') as string[]
+  const senha = formData.get('senha') as string
+  if (senha !== '1234' || ids.length === 0) return 
+  await prisma.transaction.deleteMany({ where: { id: { in: ids } } })
   revalidatePath('/')
 }

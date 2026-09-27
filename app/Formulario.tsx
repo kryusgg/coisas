@@ -1,17 +1,18 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { criarTransacao, editarTransacao } from './actions/transacao'
 
 export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, params }: any) {
+  const formRef = useRef<HTMLFormElement>(null)
+  
   const [itens, setItens] = useState(
     transacaoEdit
-      ? [{ id: 1, descricao: transacaoEdit.descricao, categoria: transacaoEdit.categoria, valor: transacaoEdit.valor.toString(), tipo: transacaoEdit.tipo }]
-      : [{ id: Date.now(), descricao: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }]
+      ? [{ id: 1, descricao: transacaoEdit.descricao, lugar: transacaoEdit.lugar || '', categoria: transacaoEdit.categoria, valor: transacaoEdit.valor.toString(), tipo: transacaoEdit.tipo }]
+      : [{ id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }]
   )
 
-  // Função inteligente que converte a data para formato Calendário (YYYY-MM-DD)
   const obterDataPadrao = () => {
     if (transacaoEdit && transacaoEdit.data) {
       const d = new Date(transacaoEdit.data)
@@ -23,7 +24,7 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
   }
 
   const adicionarItem = () => {
-    setItens([...itens, { id: Date.now(), descricao: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
+    setItens([...itens, { id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
   }
 
   const removerItem = (id: number) => {
@@ -34,6 +35,18 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
 
   const atualizarItem = (id: number, campo: string, valor: string) => {
     setItens(itens.map(i => i.id === id ? { ...i, [campo]: valor } : i))
+  }
+
+  const clientAction = async (formData: FormData) => {
+    if (transacaoEdit) {
+      await editarTransacao(formData)
+      alert('✅ Edição salva com sucesso!')
+    } else {
+      await criarTransacao(formData)
+      alert('✅ Lançamento(s) registrado(s) com sucesso!')
+      setItens([{ id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
+      formRef.current?.reset()
+    }
   }
 
   const totalItens = itens.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0)
@@ -48,12 +61,11 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
         )}
       </h2>
 
-      <form action={transacaoEdit ? editarTransacao : criarTransacao} className="flex flex-col gap-4 text-sm">
+      <form ref={formRef} action={clientAction} className="flex flex-col gap-4 text-sm">
         <input type="hidden" name="workspace_id" value={workspaceAtivo?.id || ''} />
         <input type="hidden" name="itens" value={JSON.stringify(itens)} />
         {transacaoEdit && <input type="hidden" name="id" value={transacaoEdit.id} />}
 
-        {/* NOVO CAMPO: CALENDÁRIO GLOBAL DA NOTA FISCAL */}
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
           <label className="block mb-1 font-bold text-gray-700">📅 Data da Compra / Recebimento</label>
           <input type="date" name="data" required defaultValue={obterDataPadrao()} className="border border-gray-300 p-2 w-full rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 transition-colors" />
@@ -70,9 +82,16 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
               )}
               {itens.length > 1 && <h4 className="font-bold text-gray-500 mb-2 border-b pb-1">Item {index + 1}</h4>}
 
-              <div className="mb-3">
-                <label className="block mb-1 font-semibold">{abaWs === 'EMPRESTIMO' ? 'Quem Pegou Emprestado?' : 'Descrição'}</label>
-                <input type="text" required value={item.descricao} onChange={e => atualizarItem(item.id, 'descricao', e.target.value)} className="border border-gray-300 p-2 w-full rounded bg-white outline-none focus:border-blue-500" placeholder="Ex: Queijo Muçarela 1kg" />
+              {/* MUDANÇA AQUI: Descrição e Local lado a lado */}
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <label className="block mb-1 font-semibold">{abaWs === 'EMPRESTIMO' ? 'Quem Pegou?' : 'Descrição'}</label>
+                  <input type="text" required value={item.descricao} onChange={e => atualizarItem(item.id, 'descricao', e.target.value)} className="border border-gray-300 p-2 w-full rounded bg-white outline-none focus:border-blue-500" placeholder="Ex: Queijo Muçarela" />
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold">Local (Opcional)</label>
+                  <input type="text" value={item.lugar} onChange={e => atualizarItem(item.id, 'lugar', e.target.value)} className="border border-gray-300 p-2 w-full rounded bg-white outline-none focus:border-blue-500" placeholder="Ex: Atacadão" />
+                </div>
               </div>
 
               <div className="mb-3">
