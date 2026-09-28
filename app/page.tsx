@@ -105,6 +105,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     devedor = 'Sthe'
   }
 
+  // MAGIA NOVA: Agrupar as transações por data para criar os blocos minimizáveis
+  const gruposDeTransacoes: { dataStr: string, dia: number, itens: typeof transacoes, totalDia: number }[] = [];
+  transacoes.forEach(t => {
+    const dataStr = t.data.toLocaleDateString('pt-BR');
+    let grupo = gruposDeTransacoes.find(g => g.dataStr === dataStr);
+    if (!grupo) {
+      grupo = { dataStr, dia: t.data.getDate(), itens: [], totalDia: 0 };
+      gruposDeTransacoes.push(grupo);
+    }
+    grupo.itens.push(t);
+    if (t.tipo === 'DESPESA') grupo.totalDia -= t.valor;
+    else if (t.tipo === 'RECEITA') grupo.totalDia += t.valor;
+  });
+
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-12">
       
@@ -144,6 +158,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
           {visaoAtual === 'resumo' && (
             <div className="space-y-6">
+               {/* Bloco de resumo mantido igual... */}
                <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Total Recebido' : 'Entradas'}</p>
@@ -209,9 +224,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
           )}
 
           {visaoAtual === 'extrato' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-transparent">
               
-              <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+              <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
                 <h3 className="font-bold text-gray-700">Lançamentos Registados</h3>
                 <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato${isEditMode ? '' : '&mode=edit'}`} className={`px-4 py-2 rounded text-sm font-bold transition-colors shadow-sm ${isEditMode ? 'bg-gray-800 text-white hover:bg-black' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'}`}>
                   {isEditMode ? 'Sair do Modo Edição' : '✏️ Ativar Modo Edição'}
@@ -221,12 +236,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
               <form action={apagarVariasTransacoes}>
                 
                 {isEditMode && (
-                  <div className="bg-red-50 p-3 flex justify-between items-center border-b border-red-200">
+                  <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200 mb-6 flex justify-between items-center sticky top-20 z-20">
                     <span className="text-sm font-bold text-red-800 flex items-center gap-2">
-                      <span>🗑️</span> Marque os itens abaixo para excluir
+                      <span>🗑️</span> Marque os itens nas listas abaixo para excluir
                     </span>
                     <div className="flex gap-2">
-                      <input type="password" name="senha" placeholder="Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                      <input type="password" name="senha" placeholder="Senha (1234)" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                       <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                         Excluir Selecionados
                       </button>
@@ -234,71 +249,88 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                   </div>
                 )}
 
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-100 text-gray-600">
-                    <tr>
-                      {isEditMode && <th className="p-4 w-12 text-center">✅</th>}
-                      <th className="p-4">Data</th>
-                      <th className="p-4">Descrição</th>
-                      <th className="p-4 text-right">Valor</th>
-                      {isEditMode && <th className="p-4 text-center">Ações</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {transacoes.length === 0 ? (
-                       <tr><td colSpan={isEditMode ? 5 : 4} className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
-                    ) : (
-                      transacoes.map((t) => (
-                        <tr key={t.id} className={`hover:bg-gray-50 ${t.id === params.edit ? 'bg-blue-50' : ''}`}>
-                          
-                          {isEditMode && (
-                            <td className="p-4 text-center border-r border-gray-100">
-                              <input type="checkbox" name="ids" value={t.id} className="w-4 h-4 cursor-pointer accent-red-600" />
-                            </td>
-                          )}
-
-                          {/* COLUNA 1: DATA RECUPERADA */}
-                          <td className="p-4 text-gray-500">
-                            {t.data.toLocaleDateString('pt-BR')}
-                          </td>
-                          
-                          {/* COLUNA 2: DESCRIÇÃO, LOCAL E COR */}
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 font-semibold">
-                              {t.cor_grupo && (
-                                <div className="w-3.5 h-3.5 rounded-full border border-black/10 flex-shrink-0" style={{ backgroundColor: t.cor_grupo }} title="Itens comprados juntos"></div>
-                              )}
-                              <span>{t.descricao}</span>
-                            </div>
-                            {/* @ts-ignore */}
-                            <span className="block text-xs font-normal text-gray-400 mt-1">
-                              {/* @ts-ignore */}
-                              {t.categoria || 'Outros'} {t.lugar ? ` • 📍 ${t.lugar}` : ''}
+                {/* RENDERIZAÇÃO DOS GRUPOS POR DATA */}
+                {gruposDeTransacoes.length === 0 ? (
+                   <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100">Nenhum registo encontrado.</div>
+                ) : (
+                  gruposDeTransacoes.map((grupo) => {
+                    // Magia da cor: Calcula a tonalidade com base no dia do mês (1 a 31)
+                    const hue = grupo.dia * 11.6; 
+                    
+                    return (
+                      <details key={grupo.dataStr} open className="group mb-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        
+                        {/* CABEÇALHO DA DATA (Expansível) */}
+                        <summary className="p-4 cursor-pointer flex justify-between items-center select-none transition-colors border-b border-gray-100 list-none [&::-webkit-details-marker]:hidden hover:opacity-90" style={{ backgroundColor: `hsl(${hue}, 70%, 96%)`, borderLeft: `6px solid hsl(${hue}, 60%, 55%)` }}>
+                          <div className="font-black text-gray-800 flex items-center gap-3">
+                            <span className="text-sm group-open:rotate-90 transition-transform duration-200 inline-block">▶</span>
+                            📅 {grupo.dataStr}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm font-bold">
+                            <span className="text-gray-500">{grupo.itens.length} {grupo.itens.length === 1 ? 'item' : 'itens'}</span>
+                            <span className={`bg-white/60 px-3 py-1 rounded-lg border border-black/5 ${grupo.totalDia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                              Total: R$ {Math.abs(grupo.totalDia).toFixed(2)}
                             </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">👫 {t.pago_por}</span>}
-                              {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
-                            </div>
-                          </td>
-                          
-                          {/* COLUNA 3: VALOR RECUPERADO */}
-                          <td className={`p-4 text-right font-bold ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
-                            {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
-                          </td>
-                          
-                          {isEditMode && (
-                            <td className="p-4 text-center w-24">
-                              <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&mode=edit&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-4 py-2 rounded transition-colors inline-block shadow-sm" title="Modificar Item">
-                                ✏️
-                              </Link>
-                            </td>
-                          )}
+                          </div>
+                        </summary>
 
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                        {/* TABELA DE ITENS DAQUELE DIA */}
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-gray-50/50 text-gray-400 text-xs uppercase">
+                            <tr>
+                              {isEditMode && <th className="p-3 w-12 text-center">✅</th>}
+                              <th className="p-3 pl-6">Descrição</th>
+                              <th className="p-3 text-right pr-6">Valor</th>
+                              {isEditMode && <th className="p-3 text-center w-24">Ações</th>}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {grupo.itens.map((t) => (
+                              <tr key={t.id} className={`hover:bg-gray-50 transition-colors ${t.id === params.edit ? 'bg-blue-50' : ''}`}>
+                                
+                                {isEditMode && (
+                                  <td className="p-3 text-center border-r border-gray-100">
+                                    <input type="checkbox" name="ids" value={t.id} className="w-4 h-4 cursor-pointer accent-red-600" />
+                                  </td>
+                                )}
+                                
+                                <td className="p-3 pl-6">
+                                  <div className="flex items-center gap-2 font-semibold text-gray-800">
+                                    {t.cor_grupo && (
+                                      <div className="w-3.5 h-3.5 rounded-full border border-black/10 flex-shrink-0" style={{ backgroundColor: t.cor_grupo }} title="Lote específico"></div>
+                                    )}
+                                    <span>{t.descricao}</span>
+                                  </div>
+                                  {/* @ts-ignore */}
+                                  <span className="block text-xs font-normal text-gray-400 mt-1">
+                                    {/* @ts-ignore */}
+                                    {t.categoria || 'Outros'} {t.lugar ? ` • 📍 ${t.lugar}` : ''}
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {t.compartilhado && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs border border-purple-200">👫 {t.pago_por}</span>}
+                                    {t.cartao_id && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs border border-orange-200">💳 {t.parcela_atual ? `${t.parcela_atual}/${t.total_parcelas}` : ''}</span>}
+                                  </div>
+                                </td>
+                                
+                                <td className={`p-3 pr-6 text-right font-bold align-top pt-4 ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
+                                  {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
+                                </td>
+                                
+                                {isEditMode && (
+                                  <td className="p-3 text-center align-top pt-3">
+                                    <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato&mode=edit&edit=${t.id}`} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-100 px-4 py-2 rounded transition-colors inline-block shadow-sm" title="Modificar Item">
+                                      ✏️
+                                    </Link>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </details>
+                    )
+                  })
+                )}
               </form>
             </div>
           )}
