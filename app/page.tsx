@@ -258,7 +258,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                     const hue = grupo.dia * 11.6; 
                     
                     return (
-                      <details key={grupo.dataStr} open className="group mb-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                      <details key={grupo.dataStr}  className="group mb-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         
                         {/* CABEÇALHO DA DATA (Expansível) */}
                         <summary className="p-4 cursor-pointer flex justify-between items-center select-none transition-colors border-b border-gray-100 list-none [&::-webkit-details-marker]:hidden hover:opacity-90" style={{ backgroundColor: `hsl(${hue}, 70%, 96%)`, borderLeft: `6px solid hsl(${hue}, 60%, 55%)` }}>
