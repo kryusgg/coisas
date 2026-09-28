@@ -226,7 +226,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                       <span>🗑️</span> Marque os itens abaixo para excluir
                     </span>
                     <div className="flex gap-2">
-                      <input type="password" name="senha" placeholder="Senha (1234)" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                      <input type="password" name="senha" placeholder="Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                       <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                         Excluir Selecionados
                       </button>

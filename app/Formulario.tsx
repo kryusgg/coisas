@@ -7,10 +7,7 @@ import { criarTransacao, editarTransacao } from './actions/transacao'
 export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, params }: any) {
   const formRef = useRef<HTMLFormElement>(null)
   
-  // Função para gerar uma cor aleatória bonita
   const gerarCorAleatoria = () => '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
-  
-  // Estado que guarda a cor escolhida para este lote todo
   const [corGrupo, setCorGrupo] = useState(transacaoEdit?.cor_grupo || gerarCorAleatoria())
 
   const [itens, setItens] = useState(
@@ -33,14 +30,7 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
     const primeiroItem = itens[0]; 
     setItens([
       ...itens, 
-      { 
-        id: Date.now(), 
-        descricao: '',                          
-        lugar: primeiroItem?.lugar || '',       // Herda o lugar do item 1
-        categoria: 'Outros',                    
-        valor: '',                              
-        tipo: primeiroItem?.tipo || 'DESPESA'   // Herda o tipo do item 1
-      }
+      { id: Date.now(), descricao: '', lugar: primeiroItem?.lugar || '', categoria: 'Outros', valor: '', tipo: primeiroItem?.tipo || 'DESPESA' }
     ])
   }
 
@@ -55,7 +45,6 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
   }
 
   const clientAction = async (formData: FormData) => {
-    // Adiciona a cor escolhida ao formulário antes de enviar
     formData.append('cor_grupo', corGrupo)
 
     if (transacaoEdit) {
@@ -65,7 +54,6 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
       await criarTransacao(formData)
       alert('✅ Lançamento(s) registrado(s) com sucesso!')
       
-      // Reseta os itens e gera uma NOVA cor aleatória para a próxima nota
       setItens([{ id: Date.now(), descricao: '', lugar: '', categoria: 'Outros', valor: '', tipo: 'DESPESA' }])
       setCorGrupo(gerarCorAleatoria())
       formRef.current?.reset()
@@ -89,7 +77,6 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
         <input type="hidden" name="itens" value={JSON.stringify(itens)} />
         {transacaoEdit && <input type="hidden" name="id" value={transacaoEdit.id} />}
 
-        {/* NOVA LINHA: DATA E COR DO LOTE */}
         <div className="flex gap-3">
           <div className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
             <label className="block mb-1 font-bold text-gray-700">📅 Data da Compra</label>
@@ -191,14 +178,17 @@ export default function Formulario({ abaWs, workspaceAtivo, transacaoEdit, param
           </div>
         )}
 
-        {abaWs === 'PESSOAL' && (
-          <div className="p-3 border border-blue-100 rounded bg-blue-50">
+        {/* NOVA LÓGICA: Exibe caixa de partilha para Pessoal E Doce Metade! */}
+        {(abaWs === 'PESSOAL' || abaWs === 'DOCE_METADE') && (
+          <div className={`p-3 border rounded ${abaWs === 'PESSOAL' ? 'border-blue-100 bg-blue-50' : 'border-pink-100 bg-pink-50'}`}>
             <input type="checkbox" name="compartilhado" id="compartilhado" defaultChecked={transacaoEdit?.compartilhado || false} className="peer w-4 h-4 float-left mr-2 mt-1 cursor-pointer" />
-            <label htmlFor="compartilhado" className="cursor-pointer font-bold text-blue-900 block">Dividir conta/Acerto?</label>
+            <label htmlFor="compartilhado" className={`cursor-pointer font-bold block ${abaWs === 'PESSOAL' ? 'text-blue-900' : 'text-pink-900'}`}>
+              {abaWs === 'PESSOAL' ? 'Dividir conta/Acerto?' : 'Pago com dinheiro pessoal? (Enviar p/ Acerto)'}
+            </label>
             <div className="clear-both"></div>
-            <div className="hidden peer-checked:block mt-3 pt-3 border-t border-blue-200">
-               <label className="block mb-1 text-xs text-blue-800">Quem pagou a nota toda?</label>
-               <select name="pago_por" defaultValue={transacaoEdit?.pago_por || 'Marcos'} className="border border-blue-200 p-1 w-full rounded outline-none">
+            <div className={`hidden peer-checked:block mt-3 pt-3 border-t ${abaWs === 'PESSOAL' ? 'border-blue-200' : 'border-pink-200'}`}>
+               <label className={`block mb-1 text-xs ${abaWs === 'PESSOAL' ? 'text-blue-800' : 'text-pink-800'}`}>Quem pagou a nota toda?</label>
+               <select name="pago_por" defaultValue={transacaoEdit?.pago_por || 'Marcos'} className={`border p-1 w-full rounded outline-none ${abaWs === 'PESSOAL' ? 'border-blue-200' : 'border-pink-200'}`}>
                  <option value="Marcos">Marcos</option>
                  <option value="Sthe">Sthe</option>
                </select>

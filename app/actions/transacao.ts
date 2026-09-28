@@ -11,7 +11,7 @@ export async function criarTransacao(formData: FormData) {
   
   const compartilhado = formData.get('compartilhado') === 'on'
   const pago_por = compartilhado ? (formData.get('pago_por') as string) : null
-  const cor_grupo = formData.get('cor_grupo') as string // <--- CAPTURA A COR
+  const cor_grupo = formData.get('cor_grupo') as string
   
   const usarCartao = formData.get('usar_cartao') === 'on'
   const parcelas = parseInt(formData.get('parcelas') as string) || 1
@@ -21,12 +21,23 @@ export async function criarTransacao(formData: FormData) {
   const dataInput = formData.get('data') as string
   const dataBase = new Date(`${dataInput}T12:00:00`) 
 
+  // CONFIGURAÇÃO DO SEU CARTÃO DE CRÉDITO
+  const DIA_FECHAMENTO = 5; 
+  const DIA_VENCIMENTO = 10; // <--- Altere aqui para o dia que o seu cartão vence
+
   let mesBase = dataBase.getMonth();
   const anoBase = dataBase.getFullYear();
 
-  if (usarCartao && dataBase.getDate() >= 11) {
+  // Se a compra for DEPOIS do dia de fechamento (dia 6 em diante), empurra para a próxima fatura
+  if (usarCartao && dataBase.getDate() > DIA_FECHAMENTO) {
       mesBase += 1;
   }
+
+  const currentWs = await prisma.workspace.findUnique({ where: { id: workspace_id } })
+  const wsPessoal = await prisma.workspace.findFirst({ where: { tipo: 'PESSOAL' } })
+  
+  const isDoceMetade = currentWs?.tipo === 'DOCE_METADE'
+  const deveClonar = isDoceMetade && compartilhado && wsPessoal
 
   for (const item of itens) {
     const valorTotal = parseFloat(item.valor);
@@ -35,36 +46,56 @@ export async function criarTransacao(formData: FormData) {
     if (usarCartao && parcelas > 1) {
       const valorParcela = valorTotal / parcelas
       for (let i = 1; i <= parcelas; i++) {
-        const dataParcela = new Date(anoBase, mesBase + (i - 1), 11, 12, 0, 0)
+        // Lança a data da despesa para o dia do VENCIMENTO do cartão
+        const dataParcela = new Date(anoBase, mesBase + (i - 1), DIA_VENCIMENTO, 12, 0, 0)
+        
         await prisma.transaction.create({
           data: {
             descricao: `${item.descricao} (${i}/${parcelas})`,
-            lugar: item.lugar || null,
-            cor_grupo: cor_grupo || null, // <--- SALVA A COR NO LOTE
-            valor: valorParcela,
-            data: dataParcela,
-            tipo: item.tipo, 
-            categoria: item.categoria, 
+            lugar: item.lugar || null, cor_grupo: cor_grupo || null,
+            valor: valorParcela, data: dataParcela, tipo: item.tipo, categoria: item.categoria, 
             status: i === 1 ? "PAGO" : "PENDENTE", 
-            workspace_id, compartilhado, pago_por, cartao_id, parcela_atual: i, total_parcelas: parcelas
+            workspace_id, compartilhado: isDoceMetade ? false : compartilhado, pago_por: isDoceMetade ? null : pago_por, cartao_id, parcela_atual: i, total_parcelas: parcelas
           }
         })
+
+        if (deveClonar) {
+           await prisma.transaction.create({
+              data: {
+                descricao: `🧁 [Doce Metade] ${item.descricao} (${i}/${parcelas})`,
+                lugar: item.lugar || null, cor_grupo: cor_grupo || null,
+                valor: valorParcela, data: dataParcela, tipo: item.tipo, categoria: item.categoria, 
+                status: i === 1 ? "PAGO" : "PENDENTE", 
+                workspace_id: wsPessoal!.id, compartilhado: true, pago_por, cartao_id, parcela_atual: i, total_parcelas: parcelas
+              }
+           })
+        }
       }
     } else {
-      const dataLancamento = usarCartao ? new Date(anoBase, mesBase, 11, 12, 0, 0) : dataBase;
+      // Lança a data da despesa para o dia do VENCIMENTO do cartão (ou data atual se for à vista)
+      const dataLancamento = usarCartao ? new Date(anoBase, mesBase, DIA_VENCIMENTO, 12, 0, 0) : dataBase;
+      
       await prisma.transaction.create({
         data: {
           descricao: item.descricao,
-          lugar: item.lugar || null, 
-          cor_grupo: cor_grupo || null, // <--- SALVA A COR NO LOTE
-          valor: valorTotal, 
-          data: dataLancamento, 
-          tipo: item.tipo, 
-          categoria: item.categoria, 
+          lugar: item.lugar || null, cor_grupo: cor_grupo || null, 
+          valor: valorTotal, data: dataLancamento, tipo: item.tipo, categoria: item.categoria, 
           status: "PAGO", 
-          workspace_id, compartilhado, pago_por, cartao_id, parcela_atual: usarCartao ? 1 : null, total_parcelas: usarCartao ? 1 : null
+          workspace_id, compartilhado: isDoceMetade ? false : compartilhado, pago_por: isDoceMetade ? null : pago_por, cartao_id, parcela_atual: usarCartao ? 1 : null, total_parcelas: usarCartao ? 1 : null
         }
       })
+
+      if (deveClonar) {
+         await prisma.transaction.create({
+            data: {
+              descricao: `🧁 [Doce Metade] ${item.descricao}`,
+              lugar: item.lugar || null, cor_grupo: cor_grupo || null,
+              valor: valorTotal, data: dataLancamento, tipo: item.tipo, categoria: item.categoria,
+              status: "PAGO",
+              workspace_id: wsPessoal!.id, compartilhado: true, pago_por, cartao_id, parcela_atual: usarCartao ? 1 : null, total_parcelas: usarCartao ? 1 : null
+            }
+         })
+      }
     }
   }
   revalidatePath('/')
@@ -78,7 +109,7 @@ export async function editarTransacao(formData: FormData) {
 
   const compartilhado = formData.get('compartilhado') === 'on'
   const pago_por = compartilhado ? (formData.get('pago_por') as string) : null
-  const cor_grupo = formData.get('cor_grupo') as string // <--- EDITA A COR
+  const cor_grupo = formData.get('cor_grupo') as string 
   
   const dataInput = formData.get('data') as string
   const dataBase = new Date(`${dataInput}T12:00:00`)
@@ -86,15 +117,9 @@ export async function editarTransacao(formData: FormData) {
   await prisma.transaction.update({
     where: { id },
     data: {
-      descricao: item.descricao,
-      lugar: item.lugar || null,
-      cor_grupo: cor_grupo || null,
-      valor: parseFloat(item.valor),
-      tipo: item.tipo,
-      categoria: item.categoria,
-      data: dataBase,
-      compartilhado,
-      pago_por
+      descricao: item.descricao, lugar: item.lugar || null, cor_grupo: cor_grupo || null,
+      valor: parseFloat(item.valor), tipo: item.tipo, categoria: item.categoria, data: dataBase,
+      compartilhado, pago_por
     }
   })
   revalidatePath('/')
