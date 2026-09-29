@@ -260,9 +260,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                           <Link href={`?ws=estoque&edit=${item.id}`} className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Editar Informações">
                             ✏️
                           </Link>
+                          {/* Botão de apagar CORRIGIDO sem o evento onClick */}
                           <form action={apagarItemEstoque}>
                             <input type="hidden" name="id" value={item.id} />
-                            <button type="submit" className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors" title="Apagar Item" onClick={(e) => { if(!confirm('Apagar este item do estoque?')) e.preventDefault() }}>
+                            <button type="submit" className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors" title="Apagar Item">
                               🗑️
                             </button>
                           </form>
@@ -373,7 +374,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             <span>🗑️</span> Marque os itens nas listas abaixo para excluir
                           </span>
                           <div className="flex gap-2">
-                            <input type="password" name="senha" placeholder="Senha ()" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                            <input type="password" name="senha" placeholder="Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                             <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                               Excluir Selecionados
                             </button>
