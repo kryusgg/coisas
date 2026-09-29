@@ -51,3 +51,11 @@ model Transaction {
 
   criado_em           DateTime    @default(now())
 }
+model Estoque {
+  id         String   @id @default(uuid())
+  nome       String
+  quantidade Int      @default(0)
+  categoria  String
+  imagem     String?  @db.Text // O '@db.Text' permite guardar imagens convertidas em texto (Base64)
+  criado_em  DateTime @default(now())
+}
