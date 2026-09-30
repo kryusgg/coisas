@@ -9,7 +9,6 @@ export default function FormularioEstoque({ itemEdit }: { itemEdit: any }) {
   const [imagemBase64, setImagemBase64] = useState<string>(itemEdit?.imagem || '')
   const [loading, setLoading] = useState(false)
 
-  // Transforma a imagem num formato que o banco de dados aceita
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -41,7 +40,6 @@ export default function FormularioEstoque({ itemEdit }: { itemEdit: any }) {
       <form ref={formRef} action={clientAction} className="flex flex-col gap-4 text-sm">
         {itemEdit && <input type="hidden" name="id" value={itemEdit.id} />}
 
-        {/* UPLOAD DE IMAGEM */}
         <div className="border-2 border-dashed border-teal-200 rounded-xl p-4 text-center bg-teal-50 hover:bg-teal-100 transition-colors cursor-pointer relative">
           {imagemBase64 ? (
              <img src={imagemBase64} alt="Preview" className="mx-auto h-32 object-cover rounded shadow-sm" />
@@ -56,7 +54,7 @@ export default function FormularioEstoque({ itemEdit }: { itemEdit: any }) {
 
         <div>
           <label className="block mb-1 font-bold text-gray-700">Nome do Produto / Insumo</label>
-          <input type="text" name="nome" required defaultValue={itemEdit?.nome || ''} className="border border-gray-300 p-3 w-full rounded-lg outline-none focus:border-teal-500" placeholder="Ex: Farinha de Trigo Rosa Branca 1kg" />
+          <input type="text" name="nome" required defaultValue={itemEdit?.nome || ''} className="border border-gray-300 p-3 w-full rounded-lg outline-none focus:border-teal-500" placeholder="Ex: Farinha de Trigo Rosa Branca" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -70,8 +68,17 @@ export default function FormularioEstoque({ itemEdit }: { itemEdit: any }) {
             </select>
           </div>
           <div>
-            <label className="block mb-1 font-bold text-gray-700">Quantidade Atual</label>
-            <input type="number" name="quantidade" required min="0" defaultValue={itemEdit?.quantidade || ''} className="border border-gray-300 p-3 w-full rounded-lg outline-none focus:border-teal-500 font-bold text-teal-700" placeholder="Ex: 5" />
+            <label className="block mb-1 font-bold text-gray-700">Quantidade e Unid.</label>
+            <div className="flex gap-2">
+              <input type="number" name="quantidade" step="0.01" required min="0" defaultValue={itemEdit?.quantidade || ''} className="border border-gray-300 p-3 w-full rounded-lg outline-none focus:border-teal-500 font-bold text-teal-700" placeholder="Ex: 5" />
+              <select name="unidade" defaultValue={itemEdit?.unidade || 'un'} className="border border-gray-300 p-3 rounded-lg outline-none focus:border-teal-500 bg-gray-50 font-bold">
+                <option value="un">un</option>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="L">L</option>
+              </select>
+            </div>
           </div>
         </div>
 

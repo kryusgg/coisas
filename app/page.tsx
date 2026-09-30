@@ -33,14 +33,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     itensEstoque = await prisma.estoque.findMany({ orderBy: { categoria: 'asc' } })
     itemEstoqueEdit = params.edit ? itensEstoque.find(i => i.id === params.edit) : null
     
-    const totalItens = itensEstoque.reduce((acc, i) => acc + i.quantidade, 0)
-    if (totalItens > 0) {
+    const totalTiposItens = itensEstoque.length;
+    if (totalTiposItens > 0) {
       const mapaCat = new Map()
-      itensEstoque.forEach(i => mapaCat.set(i.categoria, (mapaCat.get(i.categoria) || 0) + i.quantidade))
+      itensEstoque.forEach(i => mapaCat.set(i.categoria, (mapaCat.get(i.categoria) || 0) + 1))
       
       const coresPizza = ['#0d9488', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6']
       legendasEstoque = Array.from(mapaCat.entries()).map(([nome, qtd], index) => ({
-        nome, qtd, percentual: (qtd / totalItens) * 100, cor: coresPizza[index % coresPizza.length]
+        nome, qtd, percentual: (qtd / totalTiposItens) * 100, cor: coresPizza[index % coresPizza.length]
       })).sort((a, b) => b.qtd - a.qtd)
 
       let acumulado = 0
@@ -171,7 +171,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
               <div className="bg-white p-6 rounded-xl border border-teal-100 shadow-sm flex flex-col md:flex-row gap-8 items-center mb-8">
                 <div className="w-40 h-40 rounded-full shadow-inner border border-gray-200 flex-shrink-0" style={{ background: graficoEstoqueGradient }}></div>
                 <div className="flex-1 w-full">
-                  <h3 className="font-bold text-lg mb-4 text-teal-900">Distribuição do Estoque (Qtd. de Itens)</h3>
+                  <h3 className="font-bold text-lg mb-4 text-teal-900">Distribuição do Estoque (Variedade de Produtos)</h3>
                   {legendasEstoque.length === 0 ? (
                     <p className="text-gray-400 text-sm">O seu estoque está vazio.</p>
                   ) : (
@@ -184,7 +184,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                           </div>
                           <div className="flex gap-4">
                             <span className="text-gray-500 w-12 text-right">{c.percentual.toFixed(0)}%</span>
-                            <span className="font-bold w-12 text-right text-teal-700">{c.qtd} un</span>
+                            <span className="font-bold w-24 text-right text-teal-700">{c.qtd} {c.qtd === 1 ? 'produto' : 'produtos'}</span>
                           </div>
                         </li>
                       ))}
@@ -220,24 +220,25 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                           <span className="text-xs text-gray-400 mb-1">Quantidade</span>
                           <div className="flex items-center gap-1">
                             
-                            {/* Botão de - */}
                             <form action={atualizarQuantidadeEstoque}>
                               <input type="hidden" name="id" value={item.id} />
                               <input type="hidden" name="quantidade" value={Math.max(0, item.quantidade - 1)} />
-                              <button type="submit" className="w-7 h-7 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold flex items-center justify-center shadow-sm transition-colors" title="Diminuir 1">-</button>
+                              <button type="submit" className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold flex items-center justify-center shadow-sm transition-colors text-xs" title="Diminuir">-</button>
                             </form>
                             
-                            {/* Input Editável + Botão Salvar Flutuante */}
                             <form action={atualizarQuantidadeEstoque} className="relative flex items-center group/input">
                               <input type="hidden" name="id" value={item.id} />
-                              <input 
-                                type="number" 
-                                name="quantidade" 
-                                defaultValue={item.quantidade} 
-                                min="0"
-                                className="font-black text-xl text-teal-700 w-12 text-center bg-transparent hover:bg-teal-50 focus:bg-teal-50 border-b-2 border-transparent focus:border-teal-400 rounded-t outline-none transition-all cursor-text py-0.5" 
-                                title="Clique para digitar um valor"
-                              />
+                              <div className="flex items-baseline border-b-2 border-transparent focus-within:border-teal-400 transition-all bg-transparent hover:bg-teal-50 focus-within:bg-teal-50 rounded-t px-1 py-0.5">
+                                <input 
+                                  type="number" 
+                                  step="0.01"
+                                  name="quantidade" 
+                                  defaultValue={item.quantidade} 
+                                  min="0"
+                                  className="font-black text-xl text-teal-700 w-20 text-center bg-transparent outline-none cursor-text" 
+                                />
+                                <span className="text-xs font-bold text-teal-600 ml-1">{item.unidade}</span>
+                              </div>
                               <button 
                                 type="submit" 
                                 className="absolute -top-7 left-1/2 -translate-x-1/2 bg-teal-600 text-white font-bold text-[10px] px-2 py-1 rounded shadow-md opacity-0 pointer-events-none group-focus-within/input:opacity-100 group-focus-within/input:pointer-events-auto transition-all z-10"
@@ -246,24 +247,22 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                               </button>
                             </form>
                             
-                            {/* Botão de + */}
                             <form action={atualizarQuantidadeEstoque}>
                               <input type="hidden" name="id" value={item.id} />
                               <input type="hidden" name="quantidade" value={item.quantidade + 1} />
-                              <button type="submit" className="w-7 h-7 rounded-md bg-teal-100 hover:bg-teal-200 text-teal-700 font-bold flex items-center justify-center shadow-sm transition-colors" title="Aumentar 1">+</button>
+                              <button type="submit" className="w-6 h-6 rounded-md bg-teal-100 hover:bg-teal-200 text-teal-700 font-bold flex items-center justify-center shadow-sm transition-colors text-xs" title="Aumentar">+</button>
                             </form>
 
                           </div>
                         </div>
                         
-                        <div className="flex gap-2">
-                          <Link href={`?ws=estoque&edit=${item.id}`} className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Editar Informações">
+                        <div className="flex gap-1">
+                          <Link href={`?ws=estoque&edit=${item.id}`} className="w-7 h-7 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors text-sm" title="Editar Informações">
                             ✏️
                           </Link>
-                          {/* Botão de apagar CORRIGIDO sem o evento onClick */}
                           <form action={apagarItemEstoque}>
                             <input type="hidden" name="id" value={item.id} />
-                            <button type="submit" className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors" title="Apagar Item">
+                            <button type="submit" className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors text-sm" title="Apagar Item">
                               🗑️
                             </button>
                           </form>
@@ -276,6 +275,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
             </div>
           )}
 
+          {/* CÓDIGO FINANCEIRO ANTIGO AQUI (RESUMO, EXTRATO, CASAL) - FICA INTACTO! */}
           {abaWs !== 'ESTOQUE' && (
              <>
                <div className="flex gap-2 mb-6 border-b pb-2">

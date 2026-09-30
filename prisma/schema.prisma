@@ -54,7 +54,8 @@ model Transaction {
 model Estoque {
   id         String   @id @default(uuid())
   nome       String
-  quantidade Int      @default(0)
+  quantidade Float    @default(0)    // <-- Mudou de Int para Float
+  unidade    String   @default("un") // <-- NOVA LINHA
   categoria  String
   imagem     String?  @db.Text // O '@db.Text' permite guardar imagens convertidas em texto (Base64)
   criado_em  DateTime @default(now())
