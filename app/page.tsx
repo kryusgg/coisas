@@ -58,7 +58,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let workspaceAtivo: any = null
   let transacoes: any[] = []
   let transacaoEdit = null
-  let totalReceitas = 0, totalDespesas = 0, saldoFinal = 0
+  
+  // NOVAS VARIÁVEIS ACUMULATIVAS
+  let totalReceitasMes = 0, totalDespesasMes = 0, saldoMes = 0, saldoAcumulado = 0
   let categoriasAgrupadas: any[] = []
   let conicGradient = 'conic-gradient(#e5e7eb 0% 100%)'
   let totalCompartilhado = 0, cotaCadaUm = 0, saldoMarcos = 0
@@ -80,19 +82,26 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     const anoAtual = new Date().getFullYear()
     transacoesMes = transacoes.filter(t => t.data.getMonth() === mesAtual && t.data.getFullYear() === anoAtual)
 
-    totalReceitas = transacoesMes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
-    totalDespesas = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
-    saldoFinal = totalReceitas - totalDespesas
+    // CÁLCULOS APENAS DO MÊS (Para as Entradas e Saídas)
+    totalReceitasMes = transacoesMes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
+    totalDespesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
+    saldoMes = totalReceitasMes - totalDespesasMes
 
+    // CÁLCULOS ACUMULADOS DESDE O INÍCIO DOS TEMPOS (Para o Saldo / Caixa)
+    const receitasTotal = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
+    const despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
+    saldoAcumulado = receitasTotal - despesasTotal
+
+    // Gráfico de Pizza (continua a ver apenas o mês atual, para fazer sentido)
     const despesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA' && t.valor > 0)
     const coresPizza = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1']
     
-    if (totalDespesas > 0) {
+    if (totalDespesasMes > 0) {
       const mapaCat = new Map()
       despesasMes.forEach(t => mapaCat.set(t.categoria || 'Outros', (mapaCat.get(t.categoria || 'Outros') || 0) + t.valor))
       
       categoriasAgrupadas = Array.from(mapaCat.entries())
-        .map(([nome, valor], index) => ({ nome, valor, percentual: (valor / totalDespesas) * 100, cor: coresPizza[index % coresPizza.length] }))
+        .map(([nome, valor], index) => ({ nome, valor, percentual: (valor / totalDespesasMes) * 100, cor: coresPizza[index % coresPizza.length] }))
         .sort((a, b) => b.valor - a.valor)
 
       let acumulado = 0
@@ -101,8 +110,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
       }).join(', ')})`
     }
 
+    // ACERTO DE CASAL: AGORA USA TODAS AS TRANSAÇÕES DESDE O INÍCIO (DÍVIDA ACUMULATIVA)
     let totalMarcos = 0, totalSthe = 0, acertosMarcos = 0, acertosSthe = 0
-    transacoesMes.forEach(t => {
+    transacoes.forEach(t => {
       if (t.compartilhado) {
         if (t.tipo === 'DESPESA') {
           if (t.pago_por === 'Marcos') totalMarcos += t.valor
@@ -118,7 +128,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     cotaCadaUm = totalCompartilhado / 2
     saldoMarcos = (totalMarcos - cotaCadaUm) + acertosMarcos - acertosSthe
     
-    mensagemAcerto = "Tudo quite neste mês! 🍻"
+    mensagemAcerto = "Tudo quite e sem dívidas! 🍻"
     estiloAcerto = "bg-green-50 text-green-800 border-green-200"
     if (saldoMarcos < -0.01) {
       valorDevido = Math.abs(saldoMarcos); mensagemAcerto = `Marcos deve transferir R$ ${valorDevido.toFixed(2)} à Sthe`; estiloAcerto = "bg-red-50 text-red-800 border-red-200"; devedor = 'Marcos'
@@ -275,7 +285,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
             </div>
           )}
 
-          {/* CÓDIGO FINANCEIRO ANTIGO AQUI (RESUMO, EXTRATO, CASAL) - FICA INTACTO! */}
           {abaWs !== 'ESTOQUE' && (
              <>
                <div className="flex gap-2 mb-6 border-b pb-2">
@@ -295,27 +304,39 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                 {visaoAtual === 'resumo' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-3 gap-4">
+                      
+                      {/* Entradas do Mês */}
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Total Recebido' : 'Entradas'}</p>
-                        <p className="text-2xl font-black text-green-600">R$ {totalReceitas.toFixed(2)}</p>
+                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Recebido (Mês)' : 'Entradas (Mês)'}</p>
+                        <p className="text-2xl font-black text-green-600">R$ {totalReceitasMes.toFixed(2)}</p>
                       </div>
+                      
+                      {/* Saídas do Mês */}
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Total Emprestado' : 'Saídas'}</p>
-                        <p className="text-2xl font-black text-red-600">R$ {totalDespesas.toFixed(2)}</p>
+                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Mês)' : 'Saídas (Mês)'}</p>
+                        <p className="text-2xl font-black text-red-600">R$ {totalDespesasMes.toFixed(2)}</p>
                       </div>
-                      <div className={`p-5 rounded-xl border shadow-sm ${saldoFinal >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                        <p className="text-sm font-bold opacity-80">
-                          {abaWs === 'PESSOAL' ? 'Saldo Sobrante' : (abaWs === 'DOCE_METADE' ? 'Lucro do Mês' : 'Saldo Pendente')}
+                      
+                      {/* Saldo Acumulado (NOVO) */}
+                      <div className={`p-5 rounded-xl border shadow-sm flex flex-col justify-between ${saldoAcumulado >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div>
+                          <p className="text-sm font-bold opacity-80 leading-tight mb-1">
+                            {abaWs === 'PESSOAL' ? 'Saldo Geral (Acumulado)' : (abaWs === 'DOCE_METADE' ? 'Caixa Acumulado' : 'Saldo Pendente Total')}
+                          </p>
+                          <p className="text-2xl font-black">R$ {saldoAcumulado.toFixed(2)}</p>
+                        </div>
+                        <p className={`text-xs font-bold mt-2 ${saldoMes >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          Resultado deste mês: {saldoMes >= 0 ? '+' : ''}R$ {saldoMes.toFixed(2)}
                         </p>
-                        <p className="text-2xl font-black">R$ {saldoFinal.toFixed(2)}</p>
                       </div>
+
                     </div>
 
                     {abaWs !== 'EMPRESTIMO' && (
                       <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-8 items-center">
                         <div className="w-48 h-48 rounded-full shadow-inner border border-gray-200 flex-shrink-0" style={{ background: conicGradient }}></div>
                         <div className="flex-1 w-full">
-                          <h3 className="font-bold text-lg mb-4 text-gray-800">Despesas por Categoria</h3>
+                          <h3 className="font-bold text-lg mb-4 text-gray-800">Despesas por Categoria (Neste Mês)</h3>
                           {categoriasAgrupadas.length === 0 ? (
                             <p className="text-gray-400 text-sm">Ainda não há despesas neste mês.</p>
                           ) : (
@@ -340,8 +361,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
                     {abaWs === 'PESSOAL' && (
                       <div className={`p-5 border rounded-xl shadow-sm ${estiloAcerto}`}>
-                        <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal</h3>
-                        <p className="text-sm opacity-80 mb-2">Total partilhado: R$ {totalCompartilhado.toFixed(2)}</p>
+                        <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal (Acumulado)</h3>
+                        <p className="text-sm opacity-80 mb-2">Total partilhado desde o início: R$ {totalCompartilhado.toFixed(2)}</p>
                         <p className="text-xl font-black mb-4">{mensagemAcerto}</p>
                         {devedor && (
                           <form action={liquidarDivida}>
