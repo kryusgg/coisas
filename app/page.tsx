@@ -59,7 +59,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let transacoes: any[] = []
   let transacaoEdit = null
   
-  // NOVAS VARIÁVEIS ACUMULATIVAS
   let totalReceitasMes = 0, totalDespesasMes = 0, saldoMes = 0, saldoAcumulado = 0
   let categoriasAgrupadas: any[] = []
   let conicGradient = 'conic-gradient(#e5e7eb 0% 100%)'
@@ -92,7 +91,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     const despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
     saldoAcumulado = receitasTotal - despesasTotal
 
-    // Gráfico de Pizza (continua a ver apenas o mês atual, para fazer sentido)
+    // Gráfico de Pizza (Mês Atual)
     const despesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA' && t.valor > 0)
     const coresPizza = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1']
     
@@ -110,9 +109,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
       }).join(', ')})`
     }
 
-    // ACERTO DE CASAL: AGORA USA TODAS AS TRANSAÇÕES DESDE O INÍCIO (DÍVIDA ACUMULATIVA)
+    // ACERTO DE CASAL: VOLTAMOS PARA O CÁLCULO APENAS DO MÊS ATUAL (MENSAL)
     let totalMarcos = 0, totalSthe = 0, acertosMarcos = 0, acertosSthe = 0
-    transacoes.forEach(t => {
+    transacoesMes.forEach(t => { // <--- AQUI ESTÁ A CORREÇÃO, VOLTOU A SER 'transacoesMes'
       if (t.compartilhado) {
         if (t.tipo === 'DESPESA') {
           if (t.pago_por === 'Marcos') totalMarcos += t.valor
@@ -128,7 +127,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     cotaCadaUm = totalCompartilhado / 2
     saldoMarcos = (totalMarcos - cotaCadaUm) + acertosMarcos - acertosSthe
     
-    mensagemAcerto = "Tudo quite e sem dívidas! 🍻"
+    mensagemAcerto = "Tudo quite neste mês! 🍻"
     estiloAcerto = "bg-green-50 text-green-800 border-green-200"
     if (saldoMarcos < -0.01) {
       valorDevido = Math.abs(saldoMarcos); mensagemAcerto = `Marcos deve transferir R$ ${valorDevido.toFixed(2)} à Sthe`; estiloAcerto = "bg-red-50 text-red-800 border-red-200"; devedor = 'Marcos'
@@ -317,7 +316,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         <p className="text-2xl font-black text-red-600">R$ {totalDespesasMes.toFixed(2)}</p>
                       </div>
                       
-                      {/* Saldo Acumulado (NOVO) */}
+                      {/* Saldo Acumulado */}
                       <div className={`p-5 rounded-xl border shadow-sm flex flex-col justify-between ${saldoAcumulado >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                         <div>
                           <p className="text-sm font-bold opacity-80 leading-tight mb-1">
@@ -361,8 +360,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
                     {abaWs === 'PESSOAL' && (
                       <div className={`p-5 border rounded-xl shadow-sm ${estiloAcerto}`}>
-                        <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal (Acumulado)</h3>
-                        <p className="text-sm opacity-80 mb-2">Total partilhado desde o início: R$ {totalCompartilhado.toFixed(2)}</p>
+                        <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal (Neste Mês)</h3>
+                        <p className="text-sm opacity-80 mb-2">Total partilhado este mês: R$ {totalCompartilhado.toFixed(2)}</p>
                         <p className="text-xl font-black mb-4">{mensagemAcerto}</p>
                         {devedor && (
                           <form action={liquidarDivida}>
