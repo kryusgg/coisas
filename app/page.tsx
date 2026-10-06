@@ -59,7 +59,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let transacoes: any[] = []
   let transacaoEdit = null
   
+  // VARIÁVEIS EXPORTADAS PARA OS CARDS GLOBAIS
   let totalReceitasMes = 0, totalDespesasMes = 0, saldoMes = 0, saldoAcumulado = 0
+  let totalReceitasAno = 0 // <--- NOVA VARIÁVEL
+  let receitasTotal = 0, despesasTotal = 0
   let categoriasAgrupadas: any[] = []
   let conicGradient = 'conic-gradient(#e5e7eb 0% 100%)'
   let totalCompartilhado = 0, cotaCadaUm = 0, saldoMarcos = 0
@@ -79,16 +82,22 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
     const mesAtual = new Date().getMonth()
     const anoAtual = new Date().getFullYear()
+    
+    // FILTROS DE TEMPO
     transacoesMes = transacoes.filter(t => t.data.getMonth() === mesAtual && t.data.getFullYear() === anoAtual)
+    const transacoesAno = transacoes.filter(t => t.data.getFullYear() === anoAtual)
 
-    // CÁLCULOS APENAS DO MÊS (Para as Entradas e Saídas)
+    // CÁLCULOS APENAS DO MÊS 
     totalReceitasMes = transacoesMes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
     totalDespesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
     saldoMes = totalReceitasMes - totalDespesasMes
 
-    // CÁLCULOS ACUMULADOS DESDE O INÍCIO DOS TEMPOS (Para o Saldo / Caixa)
-    const receitasTotal = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
-    const despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
+    // CÁLCULOS DO ANO (Faturamento Anual)
+    totalReceitasAno = transacoesAno.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
+
+    // CÁLCULOS ACUMULADOS DE SEMPRE (Caixa)
+    receitasTotal = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
+    despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
     saldoAcumulado = receitasTotal - despesasTotal
 
     // Gráfico de Pizza (Mês Atual)
@@ -105,13 +114,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
       let acumulado = 0
       conicGradient = `conic-gradient(${categoriasAgrupadas.map(c => {
-        const inicio = acumulado; acumulado += c.percentual; return `${c.cor} ${inicio}\%${acumulado}%`
+        const inicio = acumulado; acumulado += c.percentual; return `${c.cor} ${inicio}% ${acumulado}%`
       }).join(', ')})`
     }
 
-    // ACERTO DE CASAL: VOLTAMOS PARA O CÁLCULO APENAS DO MÊS ATUAL (MENSAL)
+    // ACERTO DE CASAL: MENSAL
     let totalMarcos = 0, totalSthe = 0, acertosMarcos = 0, acertosSthe = 0
-    transacoesMes.forEach(t => { // <--- AQUI ESTÁ A CORREÇÃO, VOLTOU A SER 'transacoesMes'
+    transacoesMes.forEach(t => { 
       if (t.compartilhado) {
         if (t.tipo === 'DESPESA') {
           if (t.pago_por === 'Marcos') totalMarcos += t.valor
@@ -284,6 +293,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
             </div>
           )}
 
+          {/* PAINEL FINANCEIRO */}
           {abaWs !== 'ESTOQUE' && (
              <>
                <div className="flex gap-2 mb-6 border-b pb-2">
@@ -302,21 +312,40 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
                 {visaoAtual === 'resumo' && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-3 gap-4">
+                    
+                    {/* NOVA GRID DE 4 COLUNAS */}
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       
                       {/* Entradas do Mês */}
-                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Recebido (Mês)' : 'Entradas (Mês)'}</p>
-                        <p className="text-2xl font-black text-green-600">R$ {totalReceitasMes.toFixed(2)}</p>
+                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Recebido (Mês)' : 'Entradas (Mês)'}</p>
+                          <p className="text-2xl font-black text-green-600">R$ {totalReceitasMes.toFixed(2)}</p>
+                        </div>
                       </div>
                       
                       {/* Saídas do Mês */}
-                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                        <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Mês)' : 'Saídas (Mês)'}</p>
-                        <p className="text-2xl font-black text-red-600">R$ {totalDespesasMes.toFixed(2)}</p>
+                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Mês)' : 'Saídas (Mês)'}</p>
+                          <p className="text-2xl font-black text-red-600">R$ {totalDespesasMes.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Faturamento Anual (NOVO CARD) */}
+                      <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between bg-blue-50/30">
+                        <div>
+                          <p className="text-blue-900 text-sm font-bold flex items-center gap-1">
+                            📈 {abaWs === 'EMPRESTIMO' ? 'Recebido (Ano)' : 'Faturamento Anual'}
+                          </p>
+                          <p className="text-2xl font-black text-blue-700">R$ {totalReceitasAno.toFixed(2)}</p>
+                        </div>
+                        <p className="text-xs font-bold mt-2 text-blue-600 opacity-80 border-t pt-2 border-blue-100">
+                          Total de entradas em {new Date().getFullYear()}
+                        </p>
                       </div>
                       
-                      {/* Saldo Acumulado */}
+                      {/* Saldo Acumulado (Caixa) */}
                       <div className={`p-5 rounded-xl border shadow-sm flex flex-col justify-between ${saldoAcumulado >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                         <div>
                           <p className="text-sm font-bold opacity-80 leading-tight mb-1">
@@ -324,8 +353,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                           </p>
                           <p className="text-2xl font-black">R$ {saldoAcumulado.toFixed(2)}</p>
                         </div>
-                        <p className={`text-xs font-bold mt-2 ${saldoMes >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                          Resultado deste mês: {saldoMes >= 0 ? '+' : ''}R$ {saldoMes.toFixed(2)}
+                        <p className={`text-xs font-bold mt-2 border-t pt-2 ${saldoMes >= 0 ? 'text-green-700 border-green-200' : 'text-red-700 border-red-200'}`}>
+                          Resultado do mês: {saldoMes >= 0 ? '+' : ''}R$ {saldoMes.toFixed(2)}
                         </p>
                       </div>
 
@@ -394,7 +423,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             <span>🗑️</span> Marque os itens nas listas abaixo para excluir
                           </span>
                           <div className="flex gap-2">
-                            <input type="password" name="senha" placeholder="Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                            <input type="password" name="senha" placeholder="Senha (1234)" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                             <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                               Excluir Selecionados
                             </button>
