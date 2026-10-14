@@ -11,7 +11,7 @@ export async function registrarFechamentoDiario(formData: FormData) {
 
   if (!faturamento || faturamento <= 0) {
     console.error("Valor inválido");
-    return; // Retorna void em vez de objeto
+    return;
   }
 
   let dataFechamento = new Date()
@@ -77,6 +77,7 @@ export async function registrarFechamentoDiario(formData: FormData) {
   }
 }
 
+// Função para zerar caixas (Pró-labore e Lucro Intocável)
 export async function zerarCaixinha(formData: FormData) {
   const nome = formData.get('nome') as string;
   try {
@@ -87,5 +88,32 @@ export async function zerarCaixinha(formData: FormData) {
     revalidatePath('/');
   } catch (error) {
     console.error("Erro ao zerar caixinha:", error);
+  }
+}
+
+// Função para abater gastos parciais (Insumos e Carro)
+export async function sacarParcialCaixinha(formData: FormData) {
+  const nome = formData.get('nome') as string;
+  const valorRetirado = parseFloat(formData.get('valor') as string) || 0;
+
+  if (valorRetirado <= 0) return;
+
+  try {
+    const caixinhaAtual = await prisma.caixinhaVirtual.findUnique({
+      where: { nome: nome }
+    });
+
+    if (!caixinhaAtual) return;
+
+    const novoSaldo = Math.max(0, caixinhaAtual.saldo_atual - valorRetirado);
+
+    await prisma.caixinhaVirtual.update({
+      where: { nome: nome },
+      data: { saldo_atual: novoSaldo }
+    });
+
+    revalidatePath('/');
+  } catch (error) {
+    console.error("Erro ao atualizar caixinha:", error);
   }
 }

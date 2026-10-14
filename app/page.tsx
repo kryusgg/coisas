@@ -5,7 +5,7 @@ import Formulario from './Formulario'
 import FormularioEstoque from './FormularioEstoque'
 import { apagarVariasTransacoes, liquidarDivida } from './actions/transacao'
 import { apagarItemEstoque, atualizarQuantidadeEstoque } from './actions/estoque'
-import { registrarFechamentoDiario, zerarCaixinha } from './actions/fechamento'
+import { registrarFechamentoDiario, zerarCaixinha, sacarParcialCaixinha } from './actions/fechamento'
 import Link from 'next/link'
 
 const prisma = new PrismaClient()
@@ -109,7 +109,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
         .map(([nome, valor], index) => ({ nome, valor, percentual: (valor / totalDespesasMes) * 100, cor: coresPizza[index % coresPizza.length] }))
         .sort((a, b) => b.valor - a.valor)
 
-      // CORREÇÃO: Utilizando Math.round para gerar inteiros no CSS e evitar quebra no navegador
       let acumulado = 0
       const stops = categoriasAgrupadas.map(c => {
         const inicio = Math.round(acumulado); 
@@ -307,7 +306,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                   
                   {abaWs === 'DOCE_METADE' && (
                     <Link href={`?ws=doce_metade&view=caixas`} className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${visaoAtual === 'caixas' ? 'bg-pink-600 text-white shadow-sm' : 'text-pink-600 hover:bg-pink-100 border border-transparent hover:border-pink-200'}`}>
-                      🧁 Caixa Diario
+                      🧁 Caixas Virtuais
                     </Link>
                   )}
 
@@ -360,48 +359,80 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       
-                      <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between group">
+                      {/* CAIXINHA: Insumos (Retirada Parcial / Abatimento) */}
+                      <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-blue-800 font-bold flex items-center gap-2"><span>📦</span> Insumos (Reposição)</p>
-                          <form action={zerarCaixinha}>
-                            <input type="hidden" name="nome" value="INSUMOS" />
-                            <button type="submit" className="text-xs font-bold text-blue-600 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
-                          </form>
                         </div>
-                        <p className="text-3xl font-black text-blue-700">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-blue-700 mb-4">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
+                        
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-3 border-t border-blue-200">
+                          <input type="hidden" name="nome" value="INSUMOS" />
+                          <input 
+                            type="number" 
+                            name="valor" 
+                            step="0.01" 
+                            placeholder="Valor gasto" 
+                            required
+                            className="w-full px-2 py-1 text-xs border border-blue-300 rounded bg-white outline-none"
+                          />
+                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded shadow-sm whitespace-nowrap">
+                            Abater Gasto
+                          </button>
+                        </form>
                       </div>
                       
-                      <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between group">
+                      {/* CAIXINHA: Carro (Retirada Parcial / Abatimento) */}
+                      <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-orange-800 font-bold flex items-center gap-2"><span>🚗</span> Custo do Carro</p>
-                          <form action={zerarCaixinha}>
-                            <input type="hidden" name="nome" value="CARRO" />
-                            <button type="submit" className="text-xs font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
-                          </form>
                         </div>
-                        <p className="text-3xl font-black text-orange-700">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-orange-700 mb-4">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
+                        
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-3 border-t border-orange-200">
+                          <input type="hidden" name="nome" value="CARRO" />
+                          <input 
+                            type="number" 
+                            name="valor" 
+                            step="0.01" 
+                            placeholder="Valor gasto" 
+                            required
+                            className="w-full px-2 py-1 text-xs border border-orange-300 rounded bg-white outline-none"
+                          />
+                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-3 py-1 rounded shadow-sm whitespace-nowrap">
+                            Abater Gasto
+                          </button>
+                        </form>
                       </div>
                       
+                      {/* CAIXINHA: Pró-labore (Zera integralmente) */}
                       <div className="bg-green-50 p-5 rounded-xl border border-green-200 shadow-sm flex flex-col justify-between group">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-green-800 font-bold flex items-center gap-2"><span>💸</span> Pró-labore (60%)</p>
                           <form action={zerarCaixinha}>
                             <input type="hidden" name="nome" value="PRO_LABORE" />
-                            <button type="submit" className="text-xs font-bold text-green-600 bg-green-100 hover:bg-green-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Zerar/Sacar</button>
+                            <button type="submit" className="text-xs font-bold text-green-700 bg-green-200 hover:bg-green-300 px-3 py-1 rounded-md shadow-sm">
+                              Transferir / Zerar
+                            </button>
                           </form>
                         </div>
-                        <p className="text-3xl font-black text-green-700">{'R\$'} {getSaldo("PRO_LABORE").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-green-700 mt-2">{'R\$'} {getSaldo("PRO_LABORE").toFixed(2)}</p>
+                        <p className="text-[11px] text-green-600 opacity-80 mt-2">Zere quando fizer o Pix para a conta pessoal.</p>
                       </div>
                       
+                      {/* CAIXINHA: Empresa (Zera integralmente) */}
                       <div className="bg-pink-50 p-5 rounded-xl border border-pink-300 shadow-sm flex flex-col justify-between group">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-pink-800 font-bold flex items-center gap-2"><span>🧁</span> Lucro Intocável (40%)</p>
                           <form action={zerarCaixinha}>
                             <input type="hidden" name="nome" value="EMPRESA" />
-                            <button type="submit" className="text-xs font-bold text-pink-600 bg-pink-100 hover:bg-pink-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
+                            <button type="submit" className="text-xs font-bold text-pink-700 bg-pink-200 hover:bg-pink-300 px-3 py-1 rounded-md shadow-sm">
+                              Zerar / Guardar
+                            </button>
                           </form>
                         </div>
-                        <p className="text-3xl font-black text-pink-700">{'R\$'} {getSaldo("EMPRESA").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-pink-700 mt-2">{'R\$'} {getSaldo("EMPRESA").toFixed(2)}</p>
+                        <p className="text-[11px] text-pink-600 opacity-80 mt-2">Caixa intocável da Doce Metade.</p>
                       </div>
 
                     </div>
@@ -517,7 +548,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             <span>🗑️</span> Marque os itens nas listas abaixo para excluir
                           </span>
                           <div className="flex gap-2">
-                            <input type="password" name="senha" placeholder="Senha " required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                            <input type="password" name="senha" placeholder="Senha" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                             <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                               Excluir Selecionados
                             </button>
