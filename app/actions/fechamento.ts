@@ -9,7 +9,10 @@ export async function registrarFechamentoDiario(formData: FormData) {
   const faturamento = parseFloat(formData.get('faturamento') as string)
   const dataString = formData.get('data') as string
 
-  if (!faturamento || faturamento <= 0) return { error: "Valor inválido" }
+  if (!faturamento || faturamento <= 0) {
+    console.error("Valor inválido");
+    return; // Retorna void em vez de objeto
+  }
 
   let dataFechamento = new Date()
   if (dataString) {
@@ -69,15 +72,11 @@ export async function registrarFechamentoDiario(formData: FormData) {
     }
 
     revalidatePath('/')
-    return { success: true }
-    
   } catch (error) {
-    console.error(error)
-    return { error: "Erro ao registrar fechamento" }
+    console.error("Erro ao registrar fechamento:", error)
   }
 }
 
-// NOVA FUNÇÃO: Zera a caixinha após o saque/transferência
 export async function zerarCaixinha(formData: FormData) {
   const nome = formData.get('nome') as string;
   try {
@@ -86,9 +85,7 @@ export async function zerarCaixinha(formData: FormData) {
       data: { saldo_atual: 0 }
     });
     revalidatePath('/');
-    return { success: true };
   } catch (error) {
-    console.error(error);
-    return { error: "Erro ao zerar caixinha" };
+    console.error("Erro ao zerar caixinha:", error);
   }
 }
