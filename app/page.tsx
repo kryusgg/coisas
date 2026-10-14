@@ -5,6 +5,7 @@ import Formulario from './Formulario'
 import FormularioEstoque from './FormularioEstoque'
 import { apagarVariasTransacoes, liquidarDivida } from './actions/transacao'
 import { apagarItemEstoque, atualizarQuantidadeEstoque } from './actions/estoque'
+import { registrarFechamentoDiario, zerarCaixinha } from './actions/fechamento'
 import Link from 'next/link'
 
 const prisma = new PrismaClient()
@@ -20,6 +21,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let visaoAtual = 'resumo'
   if (params.view === 'extrato') visaoAtual = 'extrato'
   if (params.view === 'casal') visaoAtual = 'casal'
+  if (params.view === 'caixas') visaoAtual = 'caixas'
 
   const isEditMode = params.mode === 'edit'
 
@@ -45,9 +47,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
       let acumulado = 0
       const stops = legendasEstoque.map(c => {
-        const inicio = acumulado
+        const inicio = Math.round(acumulado)
         acumulado += c.percentual
-        return `${c.cor} ${inicio}% ${acumulado}%`
+        const fim = Math.round(acumulado)
+        return `${c.cor} ${inicio}% ${fim}%`
       }).join(', ')
       graficoEstoqueGradient = `conic-gradient(${stops})`
     }
@@ -59,9 +62,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let transacoes: any[] = []
   let transacaoEdit = null
   
-  // VARIÁVEIS EXPORTADAS PARA OS CARDS GLOBAIS
   let totalReceitasMes = 0, totalDespesasMes = 0, saldoMes = 0, saldoAcumulado = 0
-  let totalReceitasAno = 0 // <--- NOVA VARIÁVEL
+  let totalReceitasAno = 0 
   let receitasTotal = 0, despesasTotal = 0
   let categoriasAgrupadas: any[] = []
   let conicGradient = 'conic-gradient(#e5e7eb 0% 100%)'
@@ -83,24 +85,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     const mesAtual = new Date().getMonth()
     const anoAtual = new Date().getFullYear()
     
-    // FILTROS DE TEMPO
     transacoesMes = transacoes.filter(t => t.data.getMonth() === mesAtual && t.data.getFullYear() === anoAtual)
     const transacoesAno = transacoes.filter(t => t.data.getFullYear() === anoAtual)
 
-    // CÁLCULOS APENAS DO MÊS 
     totalReceitasMes = transacoesMes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
     totalDespesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
     saldoMes = totalReceitasMes - totalDespesasMes
 
-    // CÁLCULOS DO ANO (Faturamento Anual)
     totalReceitasAno = transacoesAno.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
 
-    // CÁLCULOS ACUMULADOS DE SEMPRE (Caixa)
     receitasTotal = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
     despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
     saldoAcumulado = receitasTotal - despesasTotal
 
-    // Gráfico de Pizza (Mês Atual)
     const despesasMes = transacoesMes.filter(t => t.tipo === 'DESPESA' && t.valor > 0)
     const coresPizza = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1']
     
@@ -112,13 +109,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
         .map(([nome, valor], index) => ({ nome, valor, percentual: (valor / totalDespesasMes) * 100, cor: coresPizza[index % coresPizza.length] }))
         .sort((a, b) => b.valor - a.valor)
 
+      // CORREÇÃO: Utilizando Math.round para gerar inteiros no CSS e evitar quebra no navegador
       let acumulado = 0
-      conicGradient = `conic-gradient(${categoriasAgrupadas.map(c => {
-        const inicio = acumulado; acumulado += c.percentual; return `${c.cor} ${inicio}% ${acumulado}%`
-      }).join(', ')})`
+      const stops = categoriasAgrupadas.map(c => {
+        const inicio = Math.round(acumulado); 
+        acumulado += c.percentual; 
+        const fim = Math.round(acumulado);
+        return `${c.cor} ${inicio}% ${fim}%`
+      }).join(', ')
+      conicGradient = `conic-gradient(${stops})`
     }
 
-    // ACERTO DE CASAL: MENSAL
     let totalMarcos = 0, totalSthe = 0, acertosMarcos = 0, acertosSthe = 0
     transacoesMes.forEach(t => { 
       if (t.compartilhado) {
@@ -152,6 +153,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
       if (t.tipo === 'DESPESA') grupo.totalDia -= t.valor; else if (t.tipo === 'RECEITA') grupo.totalDia += t.valor;
     });
   }
+
+  // --- LÓGICA DAS CAIXINHAS VIRTUAIS ---
+  let caixinhas: any[] = [] 
+  if (abaWs === 'DOCE_METADE') {
+    caixinhas = await prisma.caixinhaVirtual.findMany()
+  }
+  const getSaldo = (nome: string) => caixinhas.find(c => c.nome === nome)?.saldo_atual || 0
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-12">
@@ -219,7 +227,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
               <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
                 {itensEstoque.map(item => (
                   <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden hover:shadow-md transition-shadow group">
-                    
                     <div className="h-40 w-full bg-gray-100 flex items-center justify-center border-b border-gray-100">
                       {item.imagem ? (
                          <img src={item.imagem} alt={item.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -233,11 +240,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                       <h4 className="font-bold text-gray-800 leading-tight mb-4 flex-1">{item.nome}</h4>
                       
                       <div className="flex items-center justify-between mt-auto">
-                        
                         <div className="flex flex-col">
                           <span className="text-xs text-gray-400 mb-1">Quantidade</span>
                           <div className="flex items-center gap-1">
-                            
                             <form action={atualizarQuantidadeEstoque}>
                               <input type="hidden" name="id" value={item.id} />
                               <input type="hidden" name="quantidade" value={Math.max(0, item.quantidade - 1)} />
@@ -270,7 +275,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                               <input type="hidden" name="quantidade" value={item.quantidade + 1} />
                               <button type="submit" className="w-6 h-6 rounded-md bg-teal-100 hover:bg-teal-200 text-teal-700 font-bold flex items-center justify-center shadow-sm transition-colors text-xs" title="Aumentar">+</button>
                             </form>
-
                           </div>
                         </div>
                         
@@ -293,68 +297,157 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
             </div>
           )}
 
-          {/* PAINEL FINANCEIRO */}
           {abaWs !== 'ESTOQUE' && (
              <>
+               {/* MENU DE SEPARADORES INTERNOS */}
                <div className="flex gap-2 mb-6 border-b pb-2">
-                  <Link href={`?ws=${params.ws || 'pessoal'}&view=resumo`} className={`px-4 py-2 rounded font-semibold text-sm ${visaoAtual === 'resumo' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>
+                  <Link href={`?ws=${params.ws || 'pessoal'}&view=resumo`} className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${visaoAtual === 'resumo' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>
                     📊 Resumo
                   </Link>
-                  <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato`} className={`px-4 py-2 rounded font-semibold text-sm ${visaoAtual === 'extrato' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>
+                  
+                  {abaWs === 'DOCE_METADE' && (
+                    <Link href={`?ws=doce_metade&view=caixas`} className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${visaoAtual === 'caixas' ? 'bg-pink-600 text-white shadow-sm' : 'text-pink-600 hover:bg-pink-100 border border-transparent hover:border-pink-200'}`}>
+                      🧁 Caixa Diario
+                    </Link>
+                  )}
+
+                  <Link href={`?ws=${params.ws || 'pessoal'}&view=extrato`} className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${visaoAtual === 'extrato' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>
                     📝 Extrato Completo
                   </Link>
+                  
                   {abaWs === 'PESSOAL' && (
-                    <Link href={`?ws=${params.ws || 'pessoal'}&view=casal`} className={`px-4 py-2 rounded font-semibold text-sm ${visaoAtual === 'casal' ? 'bg-orange-600 text-white' : 'text-orange-500 hover:bg-orange-100'}`}>
+                    <Link href={`?ws=${params.ws || 'pessoal'}&view=casal`} className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${visaoAtual === 'casal' ? 'bg-orange-600 text-white' : 'text-orange-500 hover:bg-orange-100'}`}>
                       👫 Detalhes do Casal
                     </Link>
                   )}
                 </div>
 
+                {/* VISTA: CAIXAS VIRTUAIS */}
+                {visaoAtual === 'caixas' && abaWs === 'DOCE_METADE' && (
+                  <div className="bg-white p-8 rounded-xl border border-pink-200 shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 border-b border-pink-100 pb-6">
+                      <div className="mb-4 xl:mb-0">
+                        <h2 className="text-2xl font-black text-pink-900 mb-1">Fechamento Diário</h2>
+                        <p className="text-gray-500 text-sm">Insira o total vendido para distribuir o lucro.</p>
+                      </div>
+                      
+                      <form action={registrarFechamentoDiario} className="flex gap-3 w-full xl:w-auto">
+                        <input 
+                          type="date" 
+                          name="data" 
+                          defaultValue={new Date().toISOString().split('T')[0]} 
+                          required
+                          className="px-3 py-2.5 border-2 border-pink-200 rounded-lg outline-none focus:border-pink-500 transition-colors text-gray-600 font-medium"
+                        />
+                        <div className="relative flex-1 xl:w-48">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{'R\$'}</span>
+                          <input 
+                            type="number" 
+                            name="faturamento" 
+                            step="0.01" 
+                            placeholder="0.00" 
+                            required
+                            className="w-full pl-10 pr-4 py-2.5 border-2 border-pink-200 rounded-lg outline-none focus:border-pink-500 transition-colors font-bold text-gray-800"
+                          />
+                        </div>
+                        <button type="submit" className="bg-pink-600 hover:bg-pink-700 text-white font-black px-6 py-2.5 rounded-lg shadow-md transition-all active:scale-95 whitespace-nowrap">
+                          Distribuir
+                        </button>
+                      </form>
+                    </div>
+
+                    <h3 className="font-bold text-gray-400 uppercase tracking-wider text-xs mb-4">Saldos Acumulados (Fundo de Maneio)</h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between group">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-blue-800 font-bold flex items-center gap-2"><span>📦</span> Insumos (Reposição)</p>
+                          <form action={zerarCaixinha}>
+                            <input type="hidden" name="nome" value="INSUMOS" />
+                            <button type="submit" className="text-xs font-bold text-blue-600 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
+                          </form>
+                        </div>
+                        <p className="text-3xl font-black text-blue-700">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
+                      </div>
+                      
+                      <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between group">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-orange-800 font-bold flex items-center gap-2"><span>🚗</span> Custo do Carro</p>
+                          <form action={zerarCaixinha}>
+                            <input type="hidden" name="nome" value="CARRO" />
+                            <button type="submit" className="text-xs font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
+                          </form>
+                        </div>
+                        <p className="text-3xl font-black text-orange-700">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
+                      </div>
+                      
+                      <div className="bg-green-50 p-5 rounded-xl border border-green-200 shadow-sm flex flex-col justify-between group">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-green-800 font-bold flex items-center gap-2"><span>💸</span> Pró-labore (60%)</p>
+                          <form action={zerarCaixinha}>
+                            <input type="hidden" name="nome" value="PRO_LABORE" />
+                            <button type="submit" className="text-xs font-bold text-green-600 bg-green-100 hover:bg-green-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Zerar/Sacar</button>
+                          </form>
+                        </div>
+                        <p className="text-3xl font-black text-green-700">{'R\$'} {getSaldo("PRO_LABORE").toFixed(2)}</p>
+                      </div>
+                      
+                      <div className="bg-pink-50 p-5 rounded-xl border border-pink-300 shadow-sm flex flex-col justify-between group">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-pink-800 font-bold flex items-center gap-2"><span>🧁</span> Lucro Intocável (40%)</p>
+                          <form action={zerarCaixinha}>
+                            <input type="hidden" name="nome" value="EMPRESA" />
+                            <button type="submit" className="text-xs font-bold text-pink-600 bg-pink-100 hover:bg-pink-200 px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">Sacar</button>
+                          </form>
+                        </div>
+                        <p className="text-3xl font-black text-pink-700">{'R\$'} {getSaldo("EMPRESA").toFixed(2)}</p>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* VISTA: RESUMO GERAL */}
                 {visaoAtual === 'resumo' && (
                   <div className="space-y-6">
-                    
-                    {/* NOVA GRID DE 4 COLUNAS */}
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
                       
-                      {/* Entradas do Mês */}
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
                         <div>
                           <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Recebido (Mês)' : 'Entradas (Mês)'}</p>
-                          <p className="text-2xl font-black text-green-600">R$ {totalReceitasMes.toFixed(2)}</p>
+                          <p className="text-2xl font-black text-green-600">{'R\$'} {totalReceitasMes.toFixed(2)}</p>
                         </div>
                       </div>
                       
-                      {/* Saídas do Mês */}
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
                         <div>
                           <p className="text-gray-500 text-sm font-bold">{abaWs === 'EMPRESTIMO' ? 'Emprestado (Mês)' : 'Saídas (Mês)'}</p>
-                          <p className="text-2xl font-black text-red-600">R$ {totalDespesasMes.toFixed(2)}</p>
+                          <p className="text-2xl font-black text-red-600">{'R\$'} {totalDespesasMes.toFixed(2)}</p>
                         </div>
                       </div>
 
-                      {/* Faturamento Anual (NOVO CARD) */}
                       <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between bg-blue-50/30">
                         <div>
                           <p className="text-blue-900 text-sm font-bold flex items-center gap-1">
                             📈 {abaWs === 'EMPRESTIMO' ? 'Recebido (Ano)' : 'Faturamento Anual'}
                           </p>
-                          <p className="text-2xl font-black text-blue-700">R$ {totalReceitasAno.toFixed(2)}</p>
+                          <p className="text-2xl font-black text-blue-700">{'R\$'} {totalReceitasAno.toFixed(2)}</p>
                         </div>
                         <p className="text-xs font-bold mt-2 text-blue-600 opacity-80 border-t pt-2 border-blue-100">
                           Total de entradas em {new Date().getFullYear()}
                         </p>
                       </div>
                       
-                      {/* Saldo Acumulado (Caixa) */}
                       <div className={`p-5 rounded-xl border shadow-sm flex flex-col justify-between ${saldoAcumulado >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                         <div>
                           <p className="text-sm font-bold opacity-80 leading-tight mb-1">
                             {abaWs === 'PESSOAL' ? 'Saldo Geral (Acumulado)' : (abaWs === 'DOCE_METADE' ? 'Caixa Acumulado' : 'Saldo Pendente Total')}
                           </p>
-                          <p className="text-2xl font-black">R$ {saldoAcumulado.toFixed(2)}</p>
+                          <p className="text-2xl font-black">{'R\$'} {saldoAcumulado.toFixed(2)}</p>
                         </div>
                         <p className={`text-xs font-bold mt-2 border-t pt-2 ${saldoMes >= 0 ? 'text-green-700 border-green-200' : 'text-red-700 border-red-200'}`}>
-                          Resultado do mês: {saldoMes >= 0 ? '+' : ''}R$ {saldoMes.toFixed(2)}
+                          Resultado do mês: {saldoMes >= 0 ? '+' : ''}{'R\$'} {saldoMes.toFixed(2)}
                         </p>
                       </div>
 
@@ -377,7 +470,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                                   </div>
                                   <div className="flex gap-4">
                                     <span className="text-gray-500 w-12 text-right">{c.percentual.toFixed(0)}%</span>
-                                    <span className="font-bold w-20 text-right">R$ {c.valor.toFixed(2)}</span>
+                                    <span className="font-bold w-20 text-right">{'R\$'} {c.valor.toFixed(2)}</span>
                                   </div>
                                 </li>
                               ))}
@@ -390,7 +483,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                     {abaWs === 'PESSOAL' && (
                       <div className={`p-5 border rounded-xl shadow-sm ${estiloAcerto}`}>
                         <h3 className="font-bold text-lg mb-1 flex items-center gap-2">⚖️ Acerto de Casal (Neste Mês)</h3>
-                        <p className="text-sm opacity-80 mb-2">Total partilhado este mês: R$ {totalCompartilhado.toFixed(2)}</p>
+                        <p className="text-sm opacity-80 mb-2">Total partilhado este mês: {'R\$'} {totalCompartilhado.toFixed(2)}</p>
                         <p className="text-xl font-black mb-4">{mensagemAcerto}</p>
                         {devedor && (
                           <form action={liquidarDivida}>
@@ -398,7 +491,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             <input type="hidden" name="devedor" value={devedor} />
                             <input type="hidden" name="valor" value={valorDevido} />
                             <button type="submit" className="bg-white text-black font-bold px-4 py-2 rounded shadow-sm border border-gray-200 hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm">
-                              💸 Fazer Acerto de R$ {valorDevido.toFixed(2)} Agora
+                              💸 Fazer Acerto de {'R\$'} {valorDevido.toFixed(2)} Agora
                             </button>
                           </form>
                         )}
@@ -407,6 +500,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                   </div>
                 )}
 
+                {/* VISTA: EXTRATO COMPLETO */}
                 {visaoAtual === 'extrato' && (
                   <div className="bg-transparent">
                     <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
@@ -423,7 +517,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             <span>🗑️</span> Marque os itens nas listas abaixo para excluir
                           </span>
                           <div className="flex gap-2">
-                            <input type="password" name="senha" placeholder="Senha (1234)" required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
+                            <input type="password" name="senha" placeholder="Senha " required className="px-3 py-1.5 text-sm border border-red-300 rounded bg-white outline-none focus:border-red-500 w-32 shadow-inner" />
                             <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded font-bold text-sm shadow-sm transition-colors">
                               Excluir Selecionados
                             </button>
@@ -446,7 +540,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                                 <div className="flex items-center gap-4 text-sm font-bold">
                                   <span className="text-gray-500">{grupo.itens.length} {grupo.itens.length === 1 ? 'item' : 'itens'}</span>
                                   <span className={`bg-white/60 px-3 py-1 rounded-lg border border-black/5 ${grupo.totalDia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                    Total: R$ {Math.abs(grupo.totalDia).toFixed(2)}
+                                    Total: {'R\$'} {Math.abs(grupo.totalDia).toFixed(2)}
                                   </span>
                                 </div>
                               </summary>
@@ -481,7 +575,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                                         </div>
                                       </td>
                                       <td className={`p-3 pr-6 text-right font-bold align-top pt-4 ${t.tipo === 'ACERTO' ? 'text-purple-600' : (t.tipo === 'RECEITA' ? 'text-green-600' : 'text-red-600')}`}>
-                                        {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} R$ {t.valor.toFixed(2)}
+                                        {t.tipo === 'RECEITA' ? '+' : (t.tipo === 'ACERTO' ? '↔' : '-')} {'R\$'} {t.valor.toFixed(2)}
                                       </td>
                                       {isEditMode && (
                                         <td className="p-3 text-center align-top pt-3">
@@ -502,6 +596,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                   </div>
                 )}
 
+                {/* VISTA: DETALHES DO CASAL */}
                 {visaoAtual === 'casal' && (
                   <div className="bg-orange-50 rounded-xl shadow-sm border border-orange-200 overflow-hidden p-6">
                     <h3 className="font-bold text-lg text-orange-900 mb-4">Lançamentos Partilhados (Mês Atual)</h3>
@@ -516,7 +611,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                               <span className="text-xs text-gray-500">{t.data.toLocaleDateString('pt-BR')}</span>
                             </div>
                             <div className="text-right">
-                              <span className="block font-bold">R$ {t.valor.toFixed(2)}</span>
+                              <span className="block font-bold">{'R\$'} {t.valor.toFixed(2)}</span>
                               <span className="text-xs text-orange-600 font-normal">pago por {t.pago_por}</span>
                             </div>
                           </li>

@@ -60,3 +60,28 @@ model Estoque {
   imagem     String?  @db.Text // O '@db.Text' permite guardar imagens convertidas em texto (Base64)
   criado_em  DateTime @default(now())
 }
+// 1. Tabela para registrar o histórico dos fechamentos do dia
+model FechamentoDoceMetade {
+  id               String   @id @default(uuid())
+  data_fechamento  DateTime @default(now())
+  
+  // Valores Brutos e Rateio
+  faturamento_total Float
+  caixa_insumos     Float   // 50%
+  custo_carro       Float   // R$ 32,00
+  lucro_limpo       Float   // O que sobrou
+  
+  // Divisão do Lucro
+  pro_labore_casal  Float   // 60% do lucro limpo
+  lucro_empresa     Float   // 40% do lucro limpo
+  
+  criado_em         DateTime @default(now())
+}
+
+// 2. Tabela para guardar o Saldo Virtual Acumulado das Caixinhas
+model CaixinhaVirtual {
+  id          String   @id @default(uuid())
+  nome        String   @unique // "INSUMOS", "CARRO", "PRO_LABORE", "EMPRESA"
+  saldo_atual Float    @default(0)
+  atualizado_em DateTime @updatedAt
+}
