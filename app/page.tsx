@@ -63,7 +63,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
   let transacaoEdit = null
   
   let totalReceitasMes = 0, totalDespesasMes = 0, saldoMes = 0, saldoAcumulado = 0
-  let totalReceitasAno = 0 
+  let totalReceitasAno = 0, totalDespesasAno = 0
   let receitasTotal = 0, despesasTotal = 0
   let categoriasAgrupadas: any[] = []
   let conicGradient = 'conic-gradient(#e5e7eb 0% 100%)'
@@ -93,6 +93,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     saldoMes = totalReceitasMes - totalDespesasMes
 
     totalReceitasAno = transacoesAno.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
+    totalDespesasAno = transacoesAno.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
 
     receitasTotal = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + t.valor, 0)
     despesasTotal = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + t.valor, 0)
@@ -473,7 +474,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                 {/* VISTA: RESUMO GERAL */}
                 {visaoAtual === 'resumo' && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
+                    {/* ADICIONADA NOVA CAIXA E AJUSTE DE COLUNAS: xl:grid-cols-5 */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
                       
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
                         <div>
@@ -498,6 +500,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         </div>
                         <p className="text-xs font-bold mt-2 text-blue-600 opacity-80 border-t pt-2 border-blue-100">
                           Total de entradas em {new Date().getFullYear()}
+                        </p>
+                      </div>
+
+                      {/* NOVA CAIXA: SAÍDAS ANUAIS */}
+                      <div className="bg-white p-5 rounded-xl border border-red-100 shadow-sm flex flex-col justify-between bg-red-50/30">
+                        <div>
+                          <p className="text-red-900 text-sm font-bold flex items-center gap-1">
+                            📉 {abaWs === 'EMPRESTIMO' ? 'Emprestado (Ano)' : 'Saídas Anuais'}
+                          </p>
+                          <p className="text-2xl font-black text-red-700">{'R\$'} {totalDespesasAno.toFixed(2)}</p>
+                        </div>
+                        <p className="text-xs font-bold mt-2 text-red-600 opacity-80 border-t pt-2 border-red-100">
+                          Total de saídas em {new Date().getFullYear()}
                         </p>
                       </div>
                       
