@@ -359,7 +359,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       
-                      {/* CAIXINHA: Insumos */}
+                      {/* CAIXINHA: Insumos (Retirada Parcial) */}
                       <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-blue-800 font-bold flex items-center gap-2"><span>📦</span> Insumos (Reposição)</p>
@@ -374,15 +374,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-3 py-2 text-sm border border-blue-300 rounded bg-white outline-none focus:border-blue-500 transition-colors"
+                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-blue-300 rounded-lg bg-white outline-none focus:border-blue-500 transition-colors"
                           />
-                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
                             Abater
                           </button>
                         </form>
                       </div>
                       
-                      {/* CAIXINHA: Carro */}
+                      {/* CAIXINHA: Carro (Retirada Parcial) */}
                       <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-orange-800 font-bold flex items-center gap-2"><span>🚗</span> Custo do Carro</p>
@@ -397,15 +397,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-3 py-2 text-sm border border-orange-300 rounded bg-white outline-none focus:border-orange-500 transition-colors"
+                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-orange-300 rounded-lg bg-white outline-none focus:border-orange-500 transition-colors"
                           />
-                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
                             Abater
                           </button>
                         </form>
                       </div>
 
-                      {/* CAIXINHA: Empresa */}
+                      {/* CAIXINHA: Empresa (Zera integralmente) */}
                       <div className="bg-pink-50 p-6 rounded-xl border border-pink-300 shadow-sm flex flex-col justify-between group">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-pink-800 font-bold flex items-center gap-2"><span>🧁</span> Lucro Intocável (40%)</p>
@@ -420,7 +420,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         <p className="text-xs text-pink-600 opacity-80 mt-2">Caixa da Doce Metade.</p>
                       </div>
                       
-                      {/* CAIXINHA: Pró-labore Marcos */}
+                      {/* CAIXINHA: Pró-labore Marcos (Retirada Parcial) */}
                       <div className="bg-green-50 p-6 rounded-xl border border-green-200 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-green-800 font-bold flex items-center gap-2"><span>👨🏻‍🍳</span> Pró-labore Marcos (30%)</p>
@@ -435,15 +435,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-3 py-2 text-sm border border-green-300 rounded bg-white outline-none focus:border-green-500 transition-colors"
+                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-green-300 rounded-lg bg-white outline-none focus:border-green-500 transition-colors"
                           />
-                          <button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
                             Retirar
                           </button>
                         </form>
                       </div>
 
-                      {/* CAIXINHA: Pró-labore Sthe */}
+                      {/* CAIXINHA: Pró-labore Sthe (Retirada Parcial) */}
                       <div className="bg-teal-50 p-6 rounded-xl border border-teal-200 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-teal-800 font-bold flex items-center gap-2"><span>👩🏻‍🍳</span> Pró-labore Sthe (30%)</p>
@@ -458,9 +458,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-3 py-2 text-sm border border-teal-300 rounded bg-white outline-none focus:border-teal-500 transition-colors"
+                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-teal-300 rounded-lg bg-white outline-none focus:border-teal-500 transition-colors"
                           />
-                          <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
                             Retirar
                           </button>
                         </form>
