@@ -26,7 +26,9 @@ export async function registrarFechamentoDiario(formData: FormData) {
   const resto = faturamento - caixaInsumos - CUSTO_CARRO
   const lucroLimpo = resto > 0 ? resto : 0
   
-  const proLabore = lucroLimpo * 0.60
+  const proLaboreTotal = lucroLimpo * 0.60
+  const proLaboreMarcos = proLaboreTotal / 2
+  const proLaboreSthe = proLaboreTotal / 2
   const lucroEmpresa = lucroLimpo * 0.40
 
   try {
@@ -37,7 +39,7 @@ export async function registrarFechamentoDiario(formData: FormData) {
         caixa_insumos: caixaInsumos,
         custo_carro: CUSTO_CARRO,
         lucro_limpo: lucroLimpo,
-        pro_labore_casal: proLabore,
+        pro_labore_casal: proLaboreTotal, // Mantém o total no histórico
         lucro_empresa: lucroEmpresa
       }
     })
@@ -52,7 +54,8 @@ export async function registrarFechamentoDiario(formData: FormData) {
 
     await atualizarCaixinha("INSUMOS", caixaInsumos)
     await atualizarCaixinha("CARRO", CUSTO_CARRO)
-    await atualizarCaixinha("PRO_LABORE", proLabore)
+    await atualizarCaixinha("PRO_LABORE_MARCOS", proLaboreMarcos)
+    await atualizarCaixinha("PRO_LABORE_STHE", proLaboreSthe)
     await atualizarCaixinha("EMPRESA", lucroEmpresa)
 
     const workspaceDoceMetade = await prisma.workspace.findFirst({ where: { tipo: 'DOCE_METADE' }})
@@ -77,7 +80,6 @@ export async function registrarFechamentoDiario(formData: FormData) {
   }
 }
 
-// Função para zerar caixas (Pró-labore e Lucro Intocável)
 export async function zerarCaixinha(formData: FormData) {
   const nome = formData.get('nome') as string;
   try {
@@ -91,7 +93,6 @@ export async function zerarCaixinha(formData: FormData) {
   }
 }
 
-// Função para abater gastos parciais (Insumos e Carro)
 export async function sacarParcialCaixinha(formData: FormData) {
   const nome = formData.get('nome') as string;
   const valorRetirado = parseFloat(formData.get('valor') as string) || 0;

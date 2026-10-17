@@ -357,82 +357,113 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
 
                     <h3 className="font-bold text-gray-400 uppercase tracking-wider text-xs mb-4">Saldos Acumulados (Fundo de Maneio)</h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       
-                      {/* CAIXINHA: Insumos (Retirada Parcial / Abatimento) */}
-                      <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
+                      {/* CAIXINHA: Insumos */}
+                      <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-blue-800 font-bold flex items-center gap-2"><span>📦</span> Insumos (Reposição)</p>
                         </div>
-                        <p className="text-3xl font-black text-blue-700 mb-4">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-blue-700 mb-6">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-3 border-t border-blue-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-blue-200">
                           <input type="hidden" name="nome" value="INSUMOS" />
                           <input 
                             type="number" 
                             name="valor" 
                             step="0.01" 
-                            placeholder="Valor gasto" 
+                            placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-2 py-1 text-xs border border-blue-300 rounded bg-white outline-none"
+                            className="w-full px-3 py-2 text-sm border border-blue-300 rounded bg-white outline-none focus:border-blue-500 transition-colors"
                           />
-                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded shadow-sm whitespace-nowrap">
-                            Abater Gasto
+                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                            Abater
                           </button>
                         </form>
                       </div>
                       
-                      {/* CAIXINHA: Carro (Retirada Parcial / Abatimento) */}
-                      <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between">
+                      {/* CAIXINHA: Carro */}
+                      <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-orange-800 font-bold flex items-center gap-2"><span>🚗</span> Custo do Carro</p>
                         </div>
-                        <p className="text-3xl font-black text-orange-700 mb-4">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
+                        <p className="text-3xl font-black text-orange-700 mb-6">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-3 border-t border-orange-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-orange-200">
                           <input type="hidden" name="nome" value="CARRO" />
                           <input 
                             type="number" 
                             name="valor" 
                             step="0.01" 
-                            placeholder="Valor gasto" 
+                            placeholder={'R\$ 0,00'} 
                             required
-                            className="w-full px-2 py-1 text-xs border border-orange-300 rounded bg-white outline-none"
+                            className="w-full px-3 py-2 text-sm border border-orange-300 rounded bg-white outline-none focus:border-orange-500 transition-colors"
                           />
-                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-3 py-1 rounded shadow-sm whitespace-nowrap">
-                            Abater Gasto
+                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                            Abater
                           </button>
                         </form>
                       </div>
-                      
-                      {/* CAIXINHA: Pró-labore (Zera integralmente) */}
-                      <div className="bg-green-50 p-5 rounded-xl border border-green-200 shadow-sm flex flex-col justify-between group">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="text-sm text-green-800 font-bold flex items-center gap-2"><span>💸</span> Pró-labore (60%)</p>
-                          <form action={zerarCaixinha}>
-                            <input type="hidden" name="nome" value="PRO_LABORE" />
-                            <button type="submit" className="text-xs font-bold text-green-700 bg-green-200 hover:bg-green-300 px-3 py-1 rounded-md shadow-sm">
-                              Transferir / Zerar
-                            </button>
-                          </form>
-                        </div>
-                        <p className="text-3xl font-black text-green-700 mt-2">{'R\$'} {getSaldo("PRO_LABORE").toFixed(2)}</p>
-                        <p className="text-[11px] text-green-600 opacity-80 mt-2">Zere quando fizer o Pix para a conta pessoal.</p>
-                      </div>
-                      
-                      {/* CAIXINHA: Empresa (Zera integralmente) */}
-                      <div className="bg-pink-50 p-5 rounded-xl border border-pink-300 shadow-sm flex flex-col justify-between group">
+
+                      {/* CAIXINHA: Empresa */}
+                      <div className="bg-pink-50 p-6 rounded-xl border border-pink-300 shadow-sm flex flex-col justify-between group">
                         <div className="flex justify-between items-start mb-2">
                           <p className="text-sm text-pink-800 font-bold flex items-center gap-2"><span>🧁</span> Lucro Intocável (40%)</p>
                           <form action={zerarCaixinha}>
                             <input type="hidden" name="nome" value="EMPRESA" />
-                            <button type="submit" className="text-xs font-bold text-pink-700 bg-pink-200 hover:bg-pink-300 px-3 py-1 rounded-md shadow-sm">
-                              Zerar / Guardar
+                            <button type="submit" className="text-xs font-bold text-pink-700 bg-pink-200 hover:bg-pink-300 px-3 py-1 rounded-md shadow-sm transition-colors">
+                              Guardar
                             </button>
                           </form>
                         </div>
                         <p className="text-3xl font-black text-pink-700 mt-2">{'R\$'} {getSaldo("EMPRESA").toFixed(2)}</p>
-                        <p className="text-[11px] text-pink-600 opacity-80 mt-2">Caixa intocável da Doce Metade.</p>
+                        <p className="text-xs text-pink-600 opacity-80 mt-2">Caixa da Doce Metade.</p>
+                      </div>
+                      
+                      {/* CAIXINHA: Pró-labore Marcos */}
+                      <div className="bg-green-50 p-6 rounded-xl border border-green-200 shadow-sm flex flex-col justify-between">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-green-800 font-bold flex items-center gap-2"><span>👨🏻‍🍳</span> Pró-labore Marcos (30%)</p>
+                        </div>
+                        <p className="text-3xl font-black text-green-700 mb-6">{'R\$'} {getSaldo("PRO_LABORE_MARCOS").toFixed(2)}</p>
+                        
+                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-green-200">
+                          <input type="hidden" name="nome" value="PRO_LABORE_MARCOS" />
+                          <input 
+                            type="number" 
+                            name="valor" 
+                            step="0.01" 
+                            placeholder={'R\$ 0,00'} 
+                            required
+                            className="w-full px-3 py-2 text-sm border border-green-300 rounded bg-white outline-none focus:border-green-500 transition-colors"
+                          />
+                          <button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                            Retirar
+                          </button>
+                        </form>
+                      </div>
+
+                      {/* CAIXINHA: Pró-labore Sthe */}
+                      <div className="bg-teal-50 p-6 rounded-xl border border-teal-200 shadow-sm flex flex-col justify-between">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm text-teal-800 font-bold flex items-center gap-2"><span>👩🏻‍🍳</span> Pró-labore Sthe (30%)</p>
+                        </div>
+                        <p className="text-3xl font-black text-teal-700 mb-6">{'R\$'} {getSaldo("PRO_LABORE_STHE").toFixed(2)}</p>
+                        
+                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-teal-200">
+                          <input type="hidden" name="nome" value="PRO_LABORE_STHE" />
+                          <input 
+                            type="number" 
+                            name="valor" 
+                            step="0.01" 
+                            placeholder={'R\$ 0,00'} 
+                            required
+                            className="w-full px-3 py-2 text-sm border border-teal-300 rounded bg-white outline-none focus:border-teal-500 transition-colors"
+                          />
+                          <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold px-4 py-2 rounded shadow-sm whitespace-nowrap transition-colors">
+                            Retirar
+                          </button>
+                        </form>
                       </div>
 
                     </div>
