@@ -366,7 +366,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         </div>
                         <p className="text-3xl font-black text-blue-700 mb-6">{'R\$'} {getSaldo("INSUMOS").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-blue-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-4 border-t border-blue-200">
                           <input type="hidden" name="nome" value="INSUMOS" />
                           <input 
                             type="number" 
@@ -374,9 +374,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-blue-300 rounded-lg bg-white outline-none focus:border-blue-500 transition-colors"
+                            className="w-28 px-3 py-2 text-sm font-semibold border border-blue-300 rounded-lg bg-white outline-none focus:border-blue-500 transition-colors"
                           />
-                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors text-center">
                             Abater
                           </button>
                         </form>
@@ -389,7 +389,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         </div>
                         <p className="text-3xl font-black text-orange-700 mb-6">{'R\$'} {getSaldo("CARRO").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-orange-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-4 border-t border-orange-200">
                           <input type="hidden" name="nome" value="CARRO" />
                           <input 
                             type="number" 
@@ -397,9 +397,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-orange-300 rounded-lg bg-white outline-none focus:border-orange-500 transition-colors"
+                            className="w-28 px-3 py-2 text-sm font-semibold border border-orange-300 rounded-lg bg-white outline-none focus:border-orange-500 transition-colors"
                           />
-                          <button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors text-center">
                             Abater
                           </button>
                         </form>
@@ -427,7 +427,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         </div>
                         <p className="text-3xl font-black text-green-700 mb-6">{'R\$'} {getSaldo("PRO_LABORE_MARCOS").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-green-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-4 border-t border-green-200">
                           <input type="hidden" name="nome" value="PRO_LABORE_MARCOS" />
                           <input 
                             type="number" 
@@ -435,9 +435,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-green-300 rounded-lg bg-white outline-none focus:border-green-500 transition-colors"
+                            className="w-28 px-3 py-2 text-sm font-semibold border border-green-300 rounded-lg bg-white outline-none focus:border-green-500 transition-colors"
                           />
-                          <button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors text-center">
                             Retirar
                           </button>
                         </form>
@@ -450,7 +450,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                         </div>
                         <p className="text-3xl font-black text-teal-700 mb-6">{'R\$'} {getSaldo("PRO_LABORE_STHE").toFixed(2)}</p>
                         
-                        <form action={sacarParcialCaixinha} className="flex gap-3 pt-4 border-t border-teal-200">
+                        <form action={sacarParcialCaixinha} className="flex gap-2 pt-4 border-t border-teal-200">
                           <input type="hidden" name="nome" value="PRO_LABORE_STHE" />
                           <input 
                             type="number" 
@@ -458,9 +458,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
                             step="0.01" 
                             placeholder={'R\$ 0,00'} 
                             required
-                            className="flex-1 px-4 py-2.5 text-base font-semibold border border-teal-300 rounded-lg bg-white outline-none focus:border-teal-500 transition-colors"
+                            className="w-28 px-3 py-2 text-sm font-semibold border border-teal-300 rounded-lg bg-white outline-none focus:border-teal-500 transition-colors"
                           />
-                          <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm whitespace-nowrap transition-colors">
+                          <button type="submit" className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors text-center">
                             Retirar
                           </button>
                         </form>
